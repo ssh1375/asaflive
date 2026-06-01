@@ -1,11 +1,12 @@
 services:
   postgres:
     image: postgres:18
-    container_name: asaflive-postgress
+    container_name: asaflive-postgres
     restart: always
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgress
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: asaflive
     ports:
       - "5432:5432"
     volumes:
