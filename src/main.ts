@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { BadRequestException } from '@nestjs/common';
+import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
 
 async function bootstrap() {
 
@@ -26,6 +27,9 @@ async function bootstrap() {
     exceptionFactory: (errors) => new BadRequestException(errors),
   }));
 
-  await app.listen(process.env.PORT || 3000);
+  app.useGlobalFilters(new PrismaExceptionFilter);
+
+
+  await app.listen(process.env.PORT || 3000, '0.0.0.0');
 }
 bootstrap();

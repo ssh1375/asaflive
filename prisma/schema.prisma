@@ -31,19 +31,27 @@ model User {
 model Role {
   id          String           @id @default(uuid())
   name        String           @unique
+  domain      String
+  description String
   users       UserRole[]
-  permissions RolePermission[]
+  permissions Permission[]
 
   @@map("roles")
 }
 
 model Permission {
-  id    String           @id @default(uuid())
-  name  String           @unique  // e.g. "claim:approve"
-  roles RolePermission[]
+  id          String           @id @default(uuid())
+  name        String           @unique  // e.g. "claim:approve"
+  description String?
+  domain      String           // application identifier
 
+  @@unique([name, domain])
+
+  roles       Role[]
   @@map("permissions")
 }
+
+
 
 model UserRole {
   userId String @map("user_id")
@@ -53,17 +61,6 @@ model UserRole {
 
   @@id([userId, roleId])
   @@map("user_roles")
-}
-
-
-model RolePermission {
-  roleId       String     @map("role_id")
-  permissionId String     @map("permission_id")
-  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-
-  @@id([roleId, permissionId])
-  @@map("role_permissions")
 }
 
 

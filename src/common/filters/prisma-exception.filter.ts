@@ -7,11 +7,16 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Prisma } from '../../../generated/prisma/client';
-import { Response } from 'express';
+import type { Response } from 'express';
+
 
 @Catch(Prisma.PrismaClientKnownRequestError)
 export class PrismaExceptionFilter implements ExceptionFilter {
     catch(exception: Prisma.PrismaClientKnownRequestError, host: ArgumentsHost) {
+
+    const ctx = host.switchToHttp();
+    const response = ctx.getResponse<Response>();
+    const request = ctx.getRequest<Request>();
 
   const map: Record<string, { status: number; message: string; error: string }> = {
     // ─── Authentication ───────────────────────────────────────────────
@@ -100,12 +105,12 @@ export class PrismaExceptionFilter implements ExceptionFilter {
     P4002: { status: 500, message: 'Inconsistent introspected schema', error: 'Internal Server Error' },
   };
 
-  return (
-    map[exception.code] ?? {
-      status: 500,
+  const resBody = map[exception.code] ?? ({
+      status: exception.code,
       message: `Database error (${exception.code})`,
       error: 'Internal Server Error',
-    }
-  );
+  });
+
+    return response.json(resBody);
 }
 }

@@ -1,25 +1,38 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateRoleDto } from './dto/create-role.dto';
-import { CreatePermissionDto } from './dto/create-permission.dto';
+import { CreateRoleDto, UpdateRoleDto } from './dto/create-role.dto';
+import { CreatePermissionDto, UpdatePermissionDto } from './dto/create-permission.dto';
+import { connect } from 'node:http2';
 
 @Injectable()
 export class RbacService {
-  constructor(private prisma: PrismaService) {}
-
+  constructor(private prisma: PrismaService) { }
   // ── Roles ──────────────────────────────────────────────
-
   async createRole(dto: CreateRoleDto) {
-    const existing = await this.prisma.role.findUnique({ where: { name: dto.name } });
-    if (existing) throw new ConflictException(`Role "${dto.name}" already exists`);
+    // check all permision id has same domain name
+    const mismatchCount = await this.prisma.permission.count({
+      where: { id: { in: dto.permissions }, domain: { not: dto.domain } },
+    });
+    // count if two array not the same some permision not belong to this domain name
+    if (mismatchCount > 0) {
+      throw new BadRequestException(`All permissions must belong to domain "${dto.domain}"`);
+    }
 
-    return this.prisma.role.create({ data: dto });
+    return await this.prisma.role.create({
+      data: {
+        ...dto,
+        permissions: {
+          connect: dto.permissions.map(perID => ({ id: perID })),
+        },
+      },
+      include: { permissions: true },
+    });
   }
 
   async getRoles() {
     return await this.prisma.role.findMany({
       include: {
-        permissions: { include: { permission: true } },
+        permissions: true,
       },
     });
   }
@@ -28,29 +41,40 @@ export class RbacService {
     const role = await this.prisma.role.findUnique({
       where: { id },
       include: {
-        permissions: { include: { permission: true } },
+        permissions: true,
       },
     });
     if (!role) throw new NotFoundException(`Role "${id}" not found`);
     return role;
   }
 
+  // use CreateDto beacase user must provice permissionIds relations
   async updateRole(id: string, dto: CreateRoleDto) {
-    await this.getRole(id); // throws if not found
+    // check all permision id has same domain name
+    const mismatchCount = await this.prisma.permission.count({
+      where: { id: { in: dto.permissions }, domain: { not: dto.domain } },
+    });
+    // count if two array not the same some permision not belong to this domain name
+    if (mismatchCount > 0) {
+      throw new BadRequestException(`All permissions must belong to domain "${dto.domain}"`);
+    }
 
-    return this.prisma.role.update({
+    return await this.prisma.role.update({
       where: { id },
-      data: dto,
+      data: {
+        ...dto,
+        permissions: {
+          set: dto.permissions.map((pid: string) => ({ id: pid })),
+        },
+      },
+      include: { permissions: true },
     });
   }
 
   // ── Permissions ────────────────────────────────────────
 
   async createPermission(dto: CreatePermissionDto) {
-    const existing = await this.prisma.permission.findUnique({ where: { name: dto.name } });
-    if (existing) throw new ConflictException(`Permission "${dto.name}" already exists`);
-
-    return this.prisma.permission.create({ data: dto });
+    return await this.prisma.permission.create({ data: dto });
   }
 
   async getPermissions() {
@@ -63,7 +87,7 @@ export class RbacService {
     return permission;
   }
 
-  async updatePermission(id: string, dto: CreatePermissionDto) {
+  async updatePermission(id: string, dto: UpdatePermissionDto) {
     await this.getPermission(id); // throws if not found
 
     return this.prisma.permission.update({
@@ -72,61 +96,7 @@ export class RbacService {
     });
   }
 
-  // ── Assign / Revoke ────────────────────────────────────
 
-  async assignPermissionToRole(roleId: string, permissionId: string) {
-    await this.getRole(roleId);
-    await this.getPermission(permissionId);
-
-    const existing = await this.prisma.rolePermission.findUnique({
-      where: { roleId_permissionId: { roleId, permissionId } },
-    });
-    if (existing) throw new ConflictException('Permission already assigned to this role');
-
-    return this.prisma.rolePermission.create({
-      data: { roleId, permissionId },
-    });
-  }
-
-  async revokePermissionFromRole(roleId: string, permissionId: string) {
-    const existing = await this.prisma.rolePermission.findUnique({
-      where: { roleId_permissionId: { roleId, permissionId } },
-    });
-    if (!existing) throw new NotFoundException('Permission not assigned to this role');
-
-    return this.prisma.rolePermission.delete({
-      where: { roleId_permissionId: { roleId, permissionId } },
-    });
-  }
-
-  // ── Sync (batch replace) ───────────────────────────────
-
-  async syncPermissions(roleId: string, permissionIds: string[]) {
-    await this.getRole(roleId);
-
-    const current = await this.prisma.rolePermission.findMany({
-      where: { roleId },
-      select: { permissionId: true },
-    });
-
-    const currentIds = new Set(current.map((r) => r.permissionId));
-    const newIds = new Set(permissionIds);
-
-    const toAdd = permissionIds.filter((id) => !currentIds.has(id));
-    const toRemove = [...currentIds].filter((id) => !newIds.has(id));
-
-    await this.prisma.$transaction([
-      this.prisma.rolePermission.deleteMany({
-        where: { roleId, permissionId: { in: toRemove } },
-      }),
-      this.prisma.rolePermission.createMany({
-        data: toAdd.map((permissionId) => ({ roleId, permissionId })),
-        skipDuplicates: true,
-      }),
-    ]);
-
-    return this.getRole(roleId);
-  }
 
   // ── User Role Assignment ───────────────────────────────
 
@@ -155,23 +125,23 @@ export class RbacService {
   }
 
   async getUserPermissions(userId: string): Promise<string[]> {
-    const userRoles = await this.prisma.userRole.findMany({
-      where: { userId },
-      include: {
-        role: {
-          include: {
-            permissions: { include: { permission: true } },
-          },
-        },
-      },
-    });
+    // const userRoles = await this.prisma.userRole.findMany({
+    //   where: { userId },
+    //   include: {
+    //     role: {
+    //       include: {
+    //         permissions: true,
+    //       },
+    //     },
+    //   },
+    // });
 
     const permissions = new Set<string>();
-    for (const ur of userRoles) {
-      for (const rp of ur.role.permissions) {
-        permissions.add(rp.permission.name);
-      }
-    }
+    // for (const ur of userRoles) {
+    //   for (const rp of ur.role.permissions) {
+    //     permissions.add(rp.permission.name);
+    //   }
+    // }
 
     return [...permissions];
   }
