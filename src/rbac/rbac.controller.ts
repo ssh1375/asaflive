@@ -3,6 +3,7 @@ import { RbacService } from './rbac.service';
 import { CreateRoleDto, UpdateRoleDto } from './dto/create-role.dto';
 import { CreatePermissionDto, UpdatePermissionDto } from './dto/create-permission.dto';
 import { SyncPermissionsDto } from './dto/assing-permission.dto';
+import { CreateDomainDto } from './dto/create-domain.dto';
 // import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 // import { PermissionsGuard } from '../auth/guards/permissions.guard';
 // import { RequirePermissions } from '../auth/decorators/permissions.decorator';
@@ -12,6 +13,19 @@ import { SyncPermissionsDto } from './dto/assing-permission.dto';
 @Controller('rbac')
 export class RbacController {
   constructor(private rbacService: RbacService) { }
+
+
+  // ── Domains ──────────────────────────────────────────────
+  @Post('domains')
+  async create(@Body() dto: CreateDomainDto) {
+    return await this.rbacService.createDomain(dto);
+  }
+
+
+  @Get('domains')
+  async getDomains() {
+    return await this.rbacService.getDomains();
+  }
 
   // ── Roles ──────────────────────────────────────────────
   @Post('roles')
@@ -62,5 +76,6 @@ export class RbacController {
   async updatePermission(@Param('id') id: string, @Body() dto: UpdatePermissionDto) {
     return await this.rbacService.updatePermission(id, dto);
   }
+
 
 }

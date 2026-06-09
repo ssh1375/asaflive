@@ -3,10 +3,10 @@ import { PartialType } from '@nestjs/mapped-types';
 
 export class CreateRoleDto {
     @IsString() name: string;
-    @IsString() domain: string;
+    @IsUUID() domainId: string;
     @IsString() description: string;
     @IsArray()
-    @IsUUID('4', { each: true })
+    @IsUUID('all', { each: true })
     permissions: string[];
 }
 

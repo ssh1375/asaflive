@@ -14,10 +14,8 @@ datasource db {
 }
 
 
-
-
 model Domain {
-  id        String     @id @default(dbgenerated("uuid_generate_v7()"))
+  id    String @id @default(uuid())
   name      String     @unique  // e.g. "asaflive.ir"
   roles Role[]
 
@@ -27,13 +25,15 @@ model Domain {
 
 
 model Role {
-  id          String       @id @default(dbgenerated("uuid_generate_v7()"))
+  id    String @id @default(uuid())
   name        String       
   permissions Permission[] // implicit M:N
   users   User[]
+
   domainId    String
   domain      Domain   @relation(fields: [domainId], references: [id])
   
+  description String
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -43,12 +43,10 @@ model Role {
 
 
 model Permission {
-  id    String @id @default(dbgenerated("uuid_generate_v7()"))
+  id    String @id @default(uuid())
   name  String @unique  // e.g. "article:create"
+  description  String
   roles Role[] // implicit M:N
-
-
-  // @@check(name ~ '^[^:]+:[^:]+$')
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -56,7 +54,7 @@ model Permission {
 
 
 model User {
-  id              String    @id @default(dbgenerated("uuid_generate_v7()")) @db.Uuid
+  id    String @id @default(uuid())
   email           String?   @unique
   phone           String    @unique
   passwordHash    String

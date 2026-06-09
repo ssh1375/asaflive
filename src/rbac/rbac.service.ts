@@ -2,7 +2,8 @@ import { Injectable, NotFoundException, ConflictException, BadRequestException }
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateRoleDto, UpdateRoleDto } from './dto/create-role.dto';
 import { CreatePermissionDto, UpdatePermissionDto } from './dto/create-permission.dto';
-import { connect } from 'node:http2';
+import { CreateDomainDto } from './dto/create-domain.dto';
+
 
 @Injectable()
 export class RbacService {
@@ -14,7 +15,7 @@ export class RbacService {
       data: {
         ...dto,
         permissions: {
-          connect: dto.permissions.map(perID => ({ id: perID })),
+          connect: dto.permissions.map(pid => ({ id: pid })),
         },
       },
       include: { permissions: true },
@@ -31,17 +32,14 @@ export class RbacService {
 
 
   async getRole(id: string) {
-    const role = await this.prisma.role.findUnique({
+    const role = await this.prisma.role.findFirstOrThrow({
       where: { id },
       include: {
         permissions: true,
       },
     });
-    if (!role) throw new NotFoundException(`Role "${id}" not found`);
     return role;
   }
-
-
 
   // use CreateDto beacase user must provice permissionIds relations
   async updateRole(id: string, dto: CreateRoleDto) {
@@ -50,7 +48,7 @@ export class RbacService {
       data: {
         ...dto,
         permissions: {
-          set: dto.permissions.map((pid: string) => ({ id: pid })),
+          set: dto.permissions.map((id: string) => ({ id })),
         },
       },
       include: { permissions: true },
@@ -60,7 +58,7 @@ export class RbacService {
   // ── Permissions ────────────────────────────────────────
 
   async createPermission(dto: CreatePermissionDto) {
-    return await this.prisma.permission.create({ data: dto });
+    return await this.prisma.permission.create({ data: { ...dto } });
   }
 
   async getPermissions() {
@@ -68,8 +66,7 @@ export class RbacService {
   }
 
   async getPermission(id: string) {
-    const permission = await this.prisma.permission.findFirstOrThrow({ where: { id } });
-    return permission;
+    return await this.prisma.permission.findFirstOrThrow({ where: { id } });
   }
 
   async updatePermission(id: string, dto: UpdatePermissionDto) {
@@ -82,50 +79,48 @@ export class RbacService {
 
 
   // ── User Role Assignment ───────────────────────────────
-
-  async assignRoleToUser(userId: string, roleId: string) {
-    await this.getRole(roleId);
-
-    const existing = await this.prisma.userRole.findUnique({
-      where: { userId_roleId: { userId, roleId } },
-    });
-    if (existing) throw new ConflictException('Role already assigned to this user');
-
-    return this.prisma.userRole.create({
-      data: { userId, roleId },
-    });
-  }
-
-  async revokeRoleFromUser(userId: string, roleId: string) {
-    const existing = await this.prisma.userRole.findUnique({
-      where: { userId_roleId: { userId, roleId } },
-    });
-    if (!existing) throw new NotFoundException('Role not assigned to this user');
-
-    return this.prisma.userRole.delete({
-      where: { userId_roleId: { userId, roleId } },
+  async assignRoleToUser(userId: string, roleIds: string[]) {
+    return await this.prisma.user.update({
+      where: {
+        id: userId
+      },
+      data: {
+        roles: {
+          set: roleIds.map(roleId => ({ id: roleId }))
+        }
+      }
     });
   }
+
 
   async getUserPermissions(userId: string): Promise<string[]> {
-    // const userRoles = await this.prisma.userRole.findMany({
-    //   where: { userId },
-    //   include: {
-    //     role: {
-    //       include: {
-    //         permissions: true,
-    //       },
-    //     },
-    //   },
-    // });
+    const user = await this.prisma.user.findFirstOrThrow({
+      where: { id: userId },
+      select: {
+        roles: {
+          select: {
+            permissions: {
+              select: { name: true }
+            }
+          }
+        }
+      }
+    });
 
-    const permissions = new Set<string>();
-    // for (const ur of userRoles) {
-    //   for (const rp of ur.role.permissions) {
-    //     permissions.add(rp.permission.name);
-    //   }
-    // }
-
-    return [...permissions];
+    const permissions = [...new Set(
+      user.roles.flatMap(r => r.permissions.map(p => p.name))
+    )];
+    return permissions;
   }
+
+
+  async createDomain(dto: CreateDomainDto) {
+    return await this.prisma.domain.create({
+      data: dto
+    });
+  }
+  async getDomains() {
+    return await this.prisma.domain.findMany();
+  }
+
 }

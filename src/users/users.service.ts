@@ -7,7 +7,14 @@ export class UserService {
     constructor(private prisma: PrismaService) { }
 
     async create(dto: CreateUserDto) {
-        return await this.prisma.user.create({ data: dto });
+        const { password, ...data } = dto;
+        // make password hashd
+        return await this.prisma.user.create({
+            data: {
+                ...data,
+                passwordHash: password
+            }
+        });
     }
 
     async findAll() {
