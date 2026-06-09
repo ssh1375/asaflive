@@ -5,10 +5,9 @@ import { PartialType } from '@nestjs/mapped-types';
 
 export class CreatePermissionDto {
   @IsString() name: string;
-  @IsString() domain: string;
   @IsString() @IsOptional() description: string;
 }
 
 
 
-export class UpdatePermissionDto extends PartialType(CreatePermissionDto) {}
+export class UpdatePermissionDto extends PartialType(CreatePermissionDto) { }

@@ -1,25 +1,7 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
-
-generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
-}
-
-datasource db {
-  provider = "postgresql"
-}
-
-
-
-
 model Domain {
   id        String     @id @default(dbgenerated("uuid_generate_v7()"))
   name      String     @unique  // e.g. "asaflive.ir"
-  roles Role[]
+  userRoles UserRole[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -28,17 +10,13 @@ model Domain {
 
 model Role {
   id          String       @id @default(dbgenerated("uuid_generate_v7()"))
-  name        String       
+  name        String       @unique
   permissions Permission[] // implicit M:N
   users   User[]
-  domainId    String
   domain      Domain   @relation(fields: [domainId], references: [id])
   
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  @@unique([name, domainId])
 }
 
 
@@ -48,7 +26,7 @@ model Permission {
   roles Role[] // implicit M:N
 
 
-  // @@check(name ~ '^[^:]+:[^:]+$')
+  @@check(name ~ '^[^:]+:[^:]+$')
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -70,20 +48,3 @@ model User {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 }
-
-
-
-
-
-// model RefreshToken {
-//   id        String    @id @default(uuid())
-//   userId    String    @map("user_id")
-//   token     String    @unique
-//   used      Boolean   @default(false)
-//   revokedAt DateTime? @map("revoked_at")
-//   expiresAt DateTime  @map("expires_at")
-//   createdAt DateTime  @default(now()) @map("created_at")
-//   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-//   @@map("refresh_tokens")
-// }

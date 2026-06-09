@@ -9,15 +9,7 @@ export class RbacService {
   constructor(private prisma: PrismaService) { }
   // ── Roles ──────────────────────────────────────────────
   async createRole(dto: CreateRoleDto) {
-    // check all permision id has same domain name
-    const mismatchCount = await this.prisma.permission.count({
-      where: { id: { in: dto.permissions }, domain: { not: dto.domain } },
-    });
-    // count if two array not the same some permision not belong to this domain name
-    if (mismatchCount > 0) {
-      throw new BadRequestException(`All permissions must belong to domain "${dto.domain}"`);
-    }
-
+    // connect permissions by id, if any id not exist throw error
     return await this.prisma.role.create({
       data: {
         ...dto,
@@ -37,6 +29,7 @@ export class RbacService {
     });
   }
 
+
   async getRole(id: string) {
     const role = await this.prisma.role.findUnique({
       where: { id },
@@ -48,17 +41,10 @@ export class RbacService {
     return role;
   }
 
+
+
   // use CreateDto beacase user must provice permissionIds relations
   async updateRole(id: string, dto: CreateRoleDto) {
-    // check all permision id has same domain name
-    const mismatchCount = await this.prisma.permission.count({
-      where: { id: { in: dto.permissions }, domain: { not: dto.domain } },
-    });
-    // count if two array not the same some permision not belong to this domain name
-    if (mismatchCount > 0) {
-      throw new BadRequestException(`All permissions must belong to domain "${dto.domain}"`);
-    }
-
     return await this.prisma.role.update({
       where: { id },
       data: {
@@ -82,14 +68,11 @@ export class RbacService {
   }
 
   async getPermission(id: string) {
-    const permission = await this.prisma.permission.findUnique({ where: { id } });
-    if (!permission) throw new NotFoundException(`Permission "${id}" not found`);
+    const permission = await this.prisma.permission.findFirstOrThrow({ where: { id } });
     return permission;
   }
 
   async updatePermission(id: string, dto: UpdatePermissionDto) {
-    await this.getPermission(id); // throws if not found
-
     return this.prisma.permission.update({
       where: { id },
       data: dto,

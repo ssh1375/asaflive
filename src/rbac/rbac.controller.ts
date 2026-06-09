@@ -8,7 +8,6 @@ import { SyncPermissionsDto } from './dto/assing-permission.dto';
 // import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 
 
-
 // @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('rbac')
 export class RbacController {
@@ -63,6 +62,5 @@ export class RbacController {
   async updatePermission(@Param('id') id: string, @Body() dto: UpdatePermissionDto) {
     return await this.rbacService.updatePermission(id, dto);
   }
-
 
 }
