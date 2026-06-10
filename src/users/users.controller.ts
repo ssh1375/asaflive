@@ -1,9 +1,11 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { UserService } from './users.service';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
+import { PaginationDto } from './dto/paginate.dto';
 
 @Controller('users')
 export class UserController {
+
     constructor(private readonly userService: UserService) { }
 
     @Post()
@@ -12,8 +14,8 @@ export class UserController {
     }
 
     @Get()
-    findAll() {
-        return this.userService.findAll();
+    async findAll(@Query() paginateDto: PaginationDto) {
+        return await this.userService.findAll(paginateDto);
     }
 
     @Get(':id')
@@ -30,4 +32,5 @@ export class UserController {
     remove(@Param('id') id: string) {
         return this.userService.remove(id);
     }
+    
 }

@@ -1,6 +1,7 @@
 // create-user.dto.ts
 import { IsEmail, IsNotEmpty, IsOptional, IsString, IsPhoneNumber, MinLength } from 'class-validator';
 import { PartialType } from '@nestjs/mapped-types';
+import { Prisma } from 'generated/prisma/client';
 
 
 /**
@@ -8,11 +9,12 @@ import { PartialType } from '@nestjs/mapped-types';
  * Validates the incoming payload before it reaches the service layer.
  */
 export class CreateUserDto {
+
     @IsEmail({}, { message: 'Invalid email format' })
     email: string;
 
     @IsNotEmpty({ message: 'Phone number is required' })
-    @IsPhoneNumber(null, { message: 'Invalid phone number format' })
+    // @IsPhoneNumber(undefined, { message: 'Invalid phone number format' })
     phone: string;
 
     @IsNotEmpty({ message: 'Password is required' })
@@ -28,6 +30,16 @@ export class CreateUserDto {
     @IsString()
     lastName: string;
 }
+
+
+
+export const UserSelect = {
+    id: true,
+    email: true,
+    phone: true,
+    firstName: true,
+    lastName: true
+} satisfies Prisma.UserSelect;
 
 /**
  * Data Transfer Object for updating an existing User.

@@ -1,8 +1,9 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateRoleDto, UpdateRoleDto } from './dto/create-role.dto';
+import { CreateRoleDto, RoleSelect, UpdateRoleDto } from './dto/create-role.dto';
 import { CreatePermissionDto, UpdatePermissionDto } from './dto/create-permission.dto';
-import { CreateDomainDto } from './dto/create-domain.dto';
+import { CreateDomainDto, DomainSelect } from './dto/create-domain.dto';
+import { PaginationDto } from 'src/users/dto/paginate.dto';
 
 
 @Injectable()
@@ -10,7 +11,9 @@ export class RbacService {
   constructor(private prisma: PrismaService) { }
   // ── Roles ──────────────────────────────────────────────
   async createRole(dto: CreateRoleDto) {
+
     // connect permissions by id, if any id not exist throw error
+
     return await this.prisma.role.create({
       data: {
         ...dto,
@@ -22,8 +25,10 @@ export class RbacService {
     });
   }
 
-  async getRoles() {
+  async getRoles(paginateDto: PaginationDto) {
     return await this.prisma.role.findMany({
+      skip: paginateDto.skip,
+      take: paginateDto.limit,
       include: {
         permissions: true,
       },
@@ -61,8 +66,12 @@ export class RbacService {
     return await this.prisma.permission.create({ data: { ...dto } });
   }
 
-  async getPermissions() {
-    return this.prisma.permission.findMany();
+  async getPermissions(paginateDto: PaginationDto) {
+    return this.prisma.permission.findMany({
+      skip: paginateDto.skip,
+      take: paginateDto.limit,
+      select: RoleSelect
+    });
   }
 
   async getPermission(id: string) {
@@ -75,8 +84,6 @@ export class RbacService {
       data: dto,
     });
   }
-
-
 
   // ── User Role Assignment ───────────────────────────────
   async assignRoleToUser(userId: string, roleIds: string[]) {
@@ -119,8 +126,15 @@ export class RbacService {
       data: dto
     });
   }
-  async getDomains() {
-    return await this.prisma.domain.findMany();
+
+
+  async getDomains(paginateDto: PaginationDto) {
+    return await this.prisma.domain.findMany({
+      skip: paginateDto.skip,
+      take: paginateDto.limit,
+      select: DomainSelect
+    });
   }
+
 
 }

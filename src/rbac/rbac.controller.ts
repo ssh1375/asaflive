@@ -1,9 +1,10 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, Query } from '@nestjs/common';
 import { RbacService } from './rbac.service';
 import { CreateRoleDto, UpdateRoleDto } from './dto/create-role.dto';
 import { CreatePermissionDto, UpdatePermissionDto } from './dto/create-permission.dto';
 import { SyncPermissionsDto } from './dto/assing-permission.dto';
 import { CreateDomainDto } from './dto/create-domain.dto';
+import { PaginationDto } from 'src/users/dto/paginate.dto';
 // import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 // import { PermissionsGuard } from '../auth/guards/permissions.guard';
 // import { RequirePermissions } from '../auth/decorators/permissions.decorator';
@@ -23,8 +24,8 @@ export class RbacController {
 
 
   @Get('domains')
-  async getDomains() {
-    return await this.rbacService.getDomains();
+  async getDomains(@Query() paginateDto: PaginationDto) {
+    return await this.rbacService.getDomains(paginateDto);
   }
 
   // ── Roles ──────────────────────────────────────────────
@@ -36,8 +37,8 @@ export class RbacController {
 
   @Get('roles')
   //   @RequirePermissions('roles:read')
-  async getRoles() {
-    return await this.rbacService.getRoles();
+  async getRoles(@Query() paginateDto: PaginationDto) {
+    return await this.rbacService.getRoles(paginateDto);
   }
 
   @Get('roles/:id')
@@ -61,8 +62,8 @@ export class RbacController {
 
   @Get('permissions')
   //   @RequirePermissions('permissions:read')
-  async getPermissions() {
-    return await this.rbacService.getPermissions();
+  async getPermissions(@Query() paginateDto: PaginationDto) {
+    return await this.rbacService.getPermissions(paginateDto);
   }
 
   @Get('permissions/:id')
