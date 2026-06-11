@@ -21,7 +21,7 @@ export class RbacService {
           connect: dto.permissions.map(pid => ({ id: pid })),
         },
       },
-      include: { permissions: true },
+      include: { permissions: true }
     });
   }
 
