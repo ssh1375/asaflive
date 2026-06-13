@@ -13,7 +13,7 @@ export class UserService {
     async create(dto: CreateUserDto) {
 
         const { password, ...data } = dto;
-        // make password hashd
+        // make password hashed
         return await this.prisma.user.create({
             data: {
                 ...data,
@@ -30,6 +30,16 @@ export class UserService {
             select: UserSelect
         });
     }
+
+
+    async findByPhone(phone: string) {
+        return await this.prisma.user.findFirstOrThrow({
+            where: {
+                phone
+            }
+        })
+    }
+
 
     async findOne(id: string) {
         return await this.prisma.user.findFirstOrThrow({ where: { id }, select: UserSelect });

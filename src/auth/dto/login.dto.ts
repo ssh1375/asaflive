@@ -1,11 +1,11 @@
 // dto/login.dto.ts
-import { IsEmail, IsNotEmpty } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { IsNotEmpty, IsNumberString } from 'class-validator';
+
 
 export class LoginDto {
-    @IsEmail()
-    @Transform(({ value }) => value?.toLowerCase().trim())
-    email: string;
+    @IsNotEmpty()
+    @IsNumberString()
+    phone: string;
 
     @IsNotEmpty()
     password: string;

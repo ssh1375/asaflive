@@ -1,8 +1,14 @@
 import {
     Controller, Post, Body,
     HttpCode, HttpStatus,
+    Res,
+    ForbiddenException,
 } from '@nestjs/common';
 import { RegisterDto } from './dto/register.dto';
+import { AuthService } from './auth.service';
+import { CreateUserDto } from 'src/users/dto/user.dto';
+import { LoginDto } from './dto/login.dto';
+import { UserService } from 'src/users/users.service';
 
 const REFRESH_COOKIE = 'refresh_token';
 
@@ -18,26 +24,31 @@ const COOKIE_OPTIONS = {
 @Controller('auth')
 export class AuthController {
 
+    constructor(private authService: AuthService, private userService: UserService) {
+
+    }
     @Post('register')
     @HttpCode(HttpStatus.CREATED)
-    async register(@Body() dto: RegisterDto) {
-        return dto;
-        // return await this.authService.register(dto);
+    async register(@Body() dto: CreateUserDto) {
+        return await this.authService.register(dto);
     }
 
 
     // // Rate limit: 5 attempts per 15 minutes per IP
-    // @Post('login')
-    // @HttpCode(HttpStatus.OK)
+    @Post('login')
+    @HttpCode(HttpStatus.OK)
     // @Throttle({ default: { limit: 5, ttl: 900000 } })
-    // async login(
-    //     @Body() dto: LoginDto,
-    //     @Res({ passthrough: true }) res: Response,
-    // ) {
-    //     const { accessToken, refreshToken } = await this.authService.login(dto);
-    //     res.cookie(REFRESH_COOKIE, refreshToken, COOKIE_OPTIONS);
-    //     return { accessToken };
-    // }
+    async login(
+        @Body() dto: LoginDto,
+        @Res({ passthrough: true }) res: Response,
+    ) {
+
+        await this.authService.login(dto);
+
+        const { accessToken, refreshToken } = await this.authService.login(dto);
+        res.cookie(REFRESH_COOKIE, refreshToken, COOKIE_OPTIONS);
+        return { accessToken };
+    }
 
     // @Post('refresh')
     // @HttpCode(HttpStatus.OK)
