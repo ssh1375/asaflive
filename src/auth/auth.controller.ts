@@ -2,8 +2,9 @@ import {
     Controller, Post, Body,
     HttpCode, HttpStatus,
     Res,
-    ForbiddenException,
+    Req
 } from '@nestjs/common';
+import { Request, Response } from 'express';
 import { RegisterDto } from './dto/register.dto';
 import { AuthService } from './auth.service';
 import { CreateUserDto } from 'src/users/dto/user.dto';
@@ -20,13 +21,12 @@ const COOKIE_OPTIONS = {
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
 };
 
-
 @Controller('auth')
 export class AuthController {
-
     constructor(private authService: AuthService, private userService: UserService) {
 
     }
+
     @Post('register')
     @HttpCode(HttpStatus.CREATED)
     async register(@Body() dto: CreateUserDto) {
@@ -34,7 +34,7 @@ export class AuthController {
     }
 
 
-    // // Rate limit: 5 attempts per 15 minutes per IP
+    // Rate limit: 5 attempts per 15 minutes per IP
     @Post('login')
     @HttpCode(HttpStatus.OK)
     // @Throttle({ default: { limit: 5, ttl: 900000 } })
@@ -43,24 +43,39 @@ export class AuthController {
         @Res({ passthrough: true }) res: Response,
     ) {
 
-        await this.authService.login(dto);
+        const { access_token, refresh_token } = await this.authService.login(dto);
 
-        const { accessToken, refreshToken } = await this.authService.login(dto);
-        res.cookie(REFRESH_COOKIE, refreshToken, COOKIE_OPTIONS);
-        return { accessToken };
+        res.cookie('access_token', access_token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 15 * 60 * 1000, // 15 minutes in milliseconds
+            path: '/',
+        });
+        res.cookie('refresh_token', refresh_token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 10 * 365 * 24 * 60 * 60 * 1000, // 10 years in milliseconds
+            path: '/auth/refresh', // OPTIONAL: Restrict to refresh endpoint to save bandwidth
+        });
+
+        res.send({
+            message: "login successfully"
+        })
     }
 
-    // @Post('refresh')
-    // @HttpCode(HttpStatus.OK)
-    // async refresh(
-    //     @Req() req: Request,
-    //     @Res({ passthrough: true }) res: Response,
-    // ) {
-    //     const token = req.cookies?.[REFRESH_COOKIE];
-    //     const { accessToken, refreshToken } = await this.authService.refresh(token);
-    //     res.cookie(REFRESH_COOKIE, refreshToken, COOKIE_OPTIONS);
-    //     return { accessToken };
-    // }
+    @Post('refresh')
+    @HttpCode(HttpStatus.OK)
+    async refresh(
+        @Req() req: Request,
+        @Res({ passthrough: true }) res: Response,
+    ) {
+        // const token = req.cookies?.[REFRESH_COOKIE];
+        // const { accessToken, refreshToken } = await this.authService.generateTokenWithRsa({});
+        // res.cookie(REFRESH_COOKIE, refreshToken, COOKIE_OPTIONS);
+        // return { accessToken };
+    }
 
     // @Post('logout')
     // @HttpCode(HttpStatus.NO_CONTENT)

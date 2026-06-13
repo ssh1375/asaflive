@@ -31,13 +31,12 @@ export class UserService {
         });
     }
 
-
     async findByPhone(phone: string) {
         return await this.prisma.user.findFirstOrThrow({
             where: {
                 phone
             }
-        })
+        });
     }
 
 

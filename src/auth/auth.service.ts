@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
 import { RegisterDto } from './dto/register.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { UserService } from 'src/users/users.service';
@@ -7,7 +7,7 @@ import { LoginDto } from './dto/login.dto';
 import * as bcrypt from "bcrypt";
 import { User } from 'generated/prisma/client';
 import { JwtService } from '@nestjs/jwt';
-
+import fs from "fs/promises"
 
 
 
@@ -39,17 +39,39 @@ export class AuthService {
             throw new UnauthorizedException('Invalid credentials');
         }
 
-        const payload = {
-
+        const jwtPayload = {
+            username: "sajad"
         }
-        this.jwtService.signAsync(payload, {
-            secret: process.env.SECRET,
-            expiresIn: "15m"
-        });
-            this.jwtService.signAsync(jwtPayload, {
-        secret: process.env.JWT_REFRESH_SECRET,
-        expiresIn: '3650d', // Roughly 10 years
-      })
+        const { access_token, refresh_token } = await this.generateTokenWithRsa(jwtPayload);
 
+        return { access_token, refresh_token };
+    }
+
+
+    async generateTokenWithRsa(payload: Object): Promise<{ access_token: string, refresh_token: string }> {
+
+        if (!process.env.JWT_PRIVATE) {
+            throw new InternalServerErrorException('JWT private key is not configured');
+        }
+
+        const JWT_PRIVATE_KEY = process.env.JWT_PRIVATE.replaceAll('\\n', '\n');
+
+        const [access_token, refresh_token] = await Promise.all([this.jwtService.signAsync({
+            ...payload,
+            type: "access"
+        }, {
+            algorithm: 'RS256',
+            privateKey: JWT_PRIVATE_KEY,
+            expiresIn: '15m'
+        }),
+        this.jwtService.signAsync({
+            ...payload,
+            type: "refresh"
+        }, {
+            algorithm: 'RS256',
+            privateKey: JWT_PRIVATE_KEY,
+            expiresIn: '3650d'
+        })]);
+        return { access_token, refresh_token };
     }
 }
