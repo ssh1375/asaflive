@@ -9,12 +9,9 @@ import { PaginationDto } from 'src/users/dto/paginate.dto';
 // import { PermissionsGuard } from '../auth/guards/permissions.guard';
 // import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 
-
-// @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('rbac')
 export class RbacController {
   constructor(private rbacService: RbacService) { }
-
 
   // ── Domains ──────────────────────────────────────────────
   @Post('domains')
@@ -78,7 +75,13 @@ export class RbacController {
     return await this.rbacService.updatePermission(id, dto);
   }
 
-  // ── User Role Assignment ───────────────────────────────
+  // ── User Permissions ───────────────────────────────
+  @Get('users/:userId/permissions')
+  async getUserPermissions(@Param('userId') userId: string) {
+    return await this.rbacService.getUserPermissions(userId);
+  }
+
+
   @Patch('users/:userId/roles')
   async assignRoleToUser(@Param('userId') userId: string, @Body('roleIds') roleIds: string[]) {
     return await this.rbacService.assignRoleToUser(userId, roleIds);

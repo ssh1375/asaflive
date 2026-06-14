@@ -15,7 +15,8 @@ import { UserService } from 'src/users/users.service';
 import { RequirePermissions } from './permission-decorator';
 import { AuthGuard } from './auth.guard';
 
-const REFRESH_COOKIE = 'refresh_token';
+const ACCESS_TOKEN = 'access_token';
+const REFRESH_TOKEN = 'refresh_token';
 
 const COOKIE_OPTIONS = {
     httpOnly: true,
@@ -80,22 +81,23 @@ export class AuthController {
         });
     }
 
-    // @Post('logout')
-    // @HttpCode(HttpStatus.NO_CONTENT)
-    // @UseGuards(JwtAuthGuard)
-    // async logout(
-    //     @Req() req: Request,
-    //     @Res({ passthrough: true }) res: Response,
-    // ) {
-    //     const token = req.cookies?.[REFRESH_COOKIE];
-    //     await this.authService.logout(token);
-    //     res.clearCookie(REFRESH_COOKIE, { ...COOKIE_OPTIONS, maxAge: 0 });
-    // }
+    @Post('logout')
+    @HttpCode(HttpStatus.NO_CONTENT)
+    @UseGuards(AuthGuard)
+    async logout(
+        @Req() req: Request,
+        @Res({ passthrough: true }) res: Response,
+    ) {
+        const token = req.cookies?.[REFRESH_TOKEN];
+        // await this.authService.logout(token);
+        res.clearCookie(REFRESH_TOKEN, { ...COOKIE_OPTIONS, maxAge: 0 });
+        res.clearCookie(ACCESS_TOKEN, { ...COOKIE_OPTIONS, maxAge: 0 });
+    }
 
 
     @Get('me')
+    // just authenticate the user
     @UseGuards(AuthGuard)
-    // @RequirePermissions('user:me')
     async me(@Req() req: Request) {
         const user = req['user'] as any;
         return await this.userService.findOne(user.id);

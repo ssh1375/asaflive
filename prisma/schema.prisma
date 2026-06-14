@@ -65,23 +65,21 @@ model User {
   isPhoneVerified Boolean   @default(false)
   lastLoginAt     DateTime?
   roles           Role[]
+  refresh_tokens  RefreshToken[]
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 }
 
 
+model RefreshToken {
+  id        String    @id @default(uuid())
+  token     String    @unique
+  used      Boolean   @default(false)
+  revokedAt DateTime? @map("revoked_at")
+  expiresAt DateTime  @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-
-
-// model RefreshToken {
-//   id        String    @id @default(uuid())
-//   userId    String    @map("user_id")
-//   token     String    @unique
-//   used      Boolean   @default(false)
-//   revokedAt DateTime? @map("revoked_at")
-//   expiresAt DateTime  @map("expires_at")
-//   createdAt DateTime  @default(now()) @map("created_at")
-//   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-//   @@map("refresh_tokens")
-// }
+  @@map("refresh_tokens")
+}

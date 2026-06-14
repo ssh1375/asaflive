@@ -1,18 +1,23 @@
-import { Test, TestingModule } from '@nestjs/testing';
+
+import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
 import { RbacController } from './rbac.controller';
+import { beforeEach, describe, it, expect } from 'vitest';
+import { RbacService } from './rbac.service';
 
-describe('RbacController', () => {
-  let controller: RbacController;
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [RbacController],
-    }).compile();
 
-    controller = module.get<RbacController>(RbacController);
+
+describe('rbac domain test', () => {
+  let rbacController: RbacController;
+  let rbacServiceMock: DeepMockProxy<RbacService>;
+
+  beforeEach(() => {
+    rbacServiceMock = mockDeep<RbacService>();
+    rbacController = new RbacController(rbacServiceMock as any);
   });
 
   it('should be defined', () => {
-    expect(controller).toBeDefined();
+    expect(rbacController).toBeDefined();
   });
-});
+
+})

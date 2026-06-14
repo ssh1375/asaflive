@@ -20,13 +20,13 @@ export class AuthService {
         private jwtService: JwtService
     ) { }
 
+
     async register(dto: CreateUserDto) {
-        return await this.userService.create(dto);
+        const user = await this.userService.create(dto);
+        return user;
     }
 
-
     async login(loginDto: LoginDto) {
-
         const user = await this.userService.findByPhone(loginDto.phone);
 
         if (!user.isActive) {

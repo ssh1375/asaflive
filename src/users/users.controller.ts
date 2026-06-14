@@ -2,13 +2,19 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestj
 import { UserService } from './users.service';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import { PaginationDto } from './dto/paginate.dto';
+import { RequirePermissions } from 'src/auth/permission-decorator';
+import { Reflector } from '@nestjs/core';
 
 @Controller('users')
 export class UserController {
 
-    constructor(private readonly userService: UserService) { }
+    constructor(
+        private readonly userService: UserService,
+        private readonly reflector: Reflector // 2. Inject Reflector into the constructor
+    ) { }
 
     @Post()
+    @RequirePermissions('user:create')
     async create(@Body() dto: CreateUserDto) {
         return await this.userService.create(dto);
     }

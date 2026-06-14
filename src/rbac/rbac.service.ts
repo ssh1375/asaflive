@@ -4,7 +4,8 @@ import { CreateRoleDto, RoleSelect, UpdateRoleDto } from './dto/create-role.dto'
 import { CreatePermissionDto, PermissionSelect, UpdatePermissionDto } from './dto/create-permission.dto';
 import { CreateDomainDto, DomainSelect } from './dto/create-domain.dto';
 import { PaginationDto } from 'src/users/dto/paginate.dto';
-
+import { UserSelect } from 'src/users/dto/user.dto';
+import { User } from 'generated/prisma/client';
 
 @Injectable()
 export class RbacService {
@@ -13,7 +14,6 @@ export class RbacService {
   async createRole(dto: CreateRoleDto) {
 
     // connect permissions by id, if any id not exist throw error
-
     return await this.prisma.role.create({
       data: {
         ...dto,
@@ -21,7 +21,14 @@ export class RbacService {
           connect: dto.permissions.map(pid => ({ id: pid })),
         },
       },
-      include: { permissions: true }
+      select: {
+        ...RoleSelect,
+        permissions: {
+          select: {
+            ...PermissionSelect
+          }
+        }
+      },
     });
   }
 
@@ -29,8 +36,10 @@ export class RbacService {
     return await this.prisma.role.findMany({
       skip: paginateDto.skip,
       take: paginateDto.limit,
-      include: {
-        permissions: true,
+      select: {
+        ...RoleSelect,
+        domain: { select: DomainSelect },
+        permissions: { select: PermissionSelect }
       },
     });
   }
@@ -39,8 +48,10 @@ export class RbacService {
   async getRole(id: string) {
     const role = await this.prisma.role.findFirstOrThrow({
       where: { id },
-      include: {
-        permissions: true,
+      select: {
+        ...RoleSelect,
+        domain: { select: DomainSelect },
+        permissions: { select: PermissionSelect }
       },
     });
     return role;
@@ -56,14 +67,21 @@ export class RbacService {
           set: dto.permissions.map((id: string) => ({ id })),
         },
       },
-      include: { permissions: true },
+      select: {
+        ...RoleSelect,
+        domain: { select: DomainSelect },
+        permissions: { select: PermissionSelect }
+      },
     });
   }
 
 
   // ── Permissions ────────────────────────────────────────
   async createPermission(dto: CreatePermissionDto) {
-    return await this.prisma.permission.create({ data: { ...dto } });
+    return await this.prisma.permission.create({
+      data: { ...dto },
+      select: PermissionSelect
+    });
   }
 
   async getPermissions(paginateDto: PaginationDto) {
@@ -75,13 +93,14 @@ export class RbacService {
   }
 
   async getPermission(id: string) {
-    return await this.prisma.permission.findFirstOrThrow({ where: { id } });
+    return await this.prisma.permission.findFirstOrThrow({ where: { id }, select: PermissionSelect });
   }
 
   async updatePermission(id: string, dto: UpdatePermissionDto) {
     return await this.prisma.permission.update({
       where: { id },
       data: dto,
+      select: PermissionSelect
     });
   }
 
@@ -98,47 +117,44 @@ export class RbacService {
         }
       },
       select: {
-        id: true,
-        phone: true,
-        firstName: true,
-        lastName: true,
+        ...UserSelect,
         roles: {
           select: {
-            id: true,
-            name: true,
-            description: true,
-            permissions: { select: { id: true, name: true, description: true } }
-          }
-        }
-      }
-    });
-  }
-
-
-  async getUserPermissions(userId: string): Promise<string[]> {
-    const user = await this.prisma.user.findFirstOrThrow({
-      where: { id: userId },
-      select: {
-        roles: {
-          select: {
+            ...RoleSelect,
             permissions: {
-              select: { name: true }
+              select: PermissionSelect
             }
           }
         }
       }
     });
-
-    const permissions = [...new Set(
-      user.roles.flatMap(r => r.permissions.map(p => p.name))
-    )];
-    return permissions;
   }
 
 
+  async getUserPermissions(userId: string) {
+    const user = await this.prisma.user.findFirstOrThrow({
+      where: { id: userId },
+      select: {
+        roles: {
+          select: {
+            ...RoleSelect,
+            domain: {
+              select: DomainSelect
+            },
+            permissions: {
+              select: PermissionSelect
+            }
+          }
+        }
+      }
+    });
+    return user;
+  }
+
   async createDomain(dto: CreateDomainDto) {
     return await this.prisma.domain.create({
-      data: dto
+      data: dto,
+      select: DomainSelect
     });
   }
 
