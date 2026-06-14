@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateRoleDto, RoleSelect, UpdateRoleDto } from './dto/create-role.dto';
-import { CreatePermissionDto, UpdatePermissionDto } from './dto/create-permission.dto';
+import { CreatePermissionDto, PermissionSelect, UpdatePermissionDto } from './dto/create-permission.dto';
 import { CreateDomainDto, DomainSelect } from './dto/create-domain.dto';
 import { PaginationDto } from 'src/users/dto/paginate.dto';
 
@@ -60,17 +60,17 @@ export class RbacService {
     });
   }
 
-  // ── Permissions ────────────────────────────────────────
 
+  // ── Permissions ────────────────────────────────────────
   async createPermission(dto: CreatePermissionDto) {
     return await this.prisma.permission.create({ data: { ...dto } });
   }
 
   async getPermissions(paginateDto: PaginationDto) {
-    return this.prisma.permission.findMany({
+    return await this.prisma.permission.findMany({
       skip: paginateDto.skip,
       take: paginateDto.limit,
-      select: RoleSelect
+      select: PermissionSelect
     });
   }
 
@@ -79,7 +79,7 @@ export class RbacService {
   }
 
   async updatePermission(id: string, dto: UpdatePermissionDto) {
-    return this.prisma.permission.update({
+    return await this.prisma.permission.update({
       where: { id },
       data: dto,
     });
@@ -87,6 +87,7 @@ export class RbacService {
 
   // ── User Role Assignment ───────────────────────────────
   async assignRoleToUser(userId: string, roleIds: string[]) {
+    console.log('Assigning roles', roleIds, 'to user', userId);
     return await this.prisma.user.update({
       where: {
         id: userId
@@ -94,6 +95,20 @@ export class RbacService {
       data: {
         roles: {
           set: roleIds.map(roleId => ({ id: roleId }))
+        }
+      },
+      select: {
+        id: true,
+        phone: true,
+        firstName: true,
+        lastName: true,
+        roles: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            permissions: { select: { id: true, name: true, description: true } }
+          }
         }
       }
     });

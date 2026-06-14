@@ -9,10 +9,6 @@ import { Prisma } from 'generated/prisma/client';
  * Validates the incoming payload before it reaches the service layer.
  */
 export class CreateUserDto {
-
-    @IsEmail({}, { message: 'Invalid email format' })
-    email: string;
-
     @IsNotEmpty({ message: 'Phone number is required' })
     // @IsPhoneNumber(undefined, { message: 'Invalid phone number format' })
     phone: string;
@@ -35,7 +31,6 @@ export class CreateUserDto {
 
 export const UserSelect = {
     id: true,
-    email: true,
     phone: true,
     firstName: true,
     lastName: true

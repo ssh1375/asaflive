@@ -3,10 +3,18 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { BadRequestException } from '@nestjs/common';
 import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
+import * as cookieParser from 'cookie-parser';
+
+
+
+
+
 
 async function bootstrap() {
 
   const app = await NestFactory.create(AppModule);
+  app.use(cookieParser());
+
 
   app.useGlobalPipes(new ValidationPipe({
     // Strip properties that have no validation decorators
@@ -26,6 +34,8 @@ async function bootstrap() {
     // Customize the shape of validation error responses
     exceptionFactory: (errors) => new BadRequestException(errors),
   }));
+
+
 
   app.useGlobalFilters(new PrismaExceptionFilter);
 

@@ -2,7 +2,9 @@ import {
     Controller, Post, Body,
     HttpCode, HttpStatus,
     Res,
-    Req
+    Req,
+    Get,
+    UseGuards
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { RegisterDto } from './dto/register.dto';
@@ -10,6 +12,8 @@ import { AuthService } from './auth.service';
 import { CreateUserDto } from 'src/users/dto/user.dto';
 import { LoginDto } from './dto/login.dto';
 import { UserService } from 'src/users/users.service';
+import { RequirePermissions } from './permission-decorator';
+import { AuthGuard } from './auth.guard';
 
 const REFRESH_COOKIE = 'refresh_token';
 
@@ -23,8 +27,9 @@ const COOKIE_OPTIONS = {
 
 @Controller('auth')
 export class AuthController {
-    constructor(private authService: AuthService, private userService: UserService) {
-
+    constructor(
+        private authService: AuthService,
+        private userService: UserService) {
     }
 
     @Post('register')
@@ -33,11 +38,8 @@ export class AuthController {
         return await this.authService.register(dto);
     }
 
-
-    // Rate limit: 5 attempts per 15 minutes per IP
     @Post('login')
     @HttpCode(HttpStatus.OK)
-    // @Throttle({ default: { limit: 5, ttl: 900000 } })
     async login(
         @Body() dto: LoginDto,
         @Res({ passthrough: true }) res: Response,
@@ -71,10 +73,11 @@ export class AuthController {
         @Req() req: Request,
         @Res({ passthrough: true }) res: Response,
     ) {
-        // const token = req.cookies?.[REFRESH_COOKIE];
-        // const { accessToken, refreshToken } = await this.authService.generateTokenWithRsa({});
-        // res.cookie(REFRESH_COOKIE, refreshToken, COOKIE_OPTIONS);
-        // return { accessToken };
+        const refresh_token = req.cookies?.['refresh_token'];
+        const payload = await this.authService.verifyRefreshToken(refresh_token);
+        res.send({
+            payload
+        });
     }
 
     // @Post('logout')
@@ -89,10 +92,13 @@ export class AuthController {
     //     res.clearCookie(REFRESH_COOKIE, { ...COOKIE_OPTIONS, maxAge: 0 });
     // }
 
-    // @Get('me')
-    // @UseGuards(JwtAuthGuard)
-    // me(@Req() req: Request) {
-    //     return req.user;
-    // }
+
+    @Get('me')
+    @UseGuards(AuthGuard)
+    // @RequirePermissions('user:me')
+    async me(@Req() req: Request) {
+        const user = req['user'] as any;
+        return await this.userService.findOne(user.id);
+    }
 
 }

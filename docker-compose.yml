@@ -11,3 +11,13 @@ services:
       - "5432:5432"
     volumes:
       - ./data:/var/lib/postgresql
+
+  redis:
+    image: redis:alpine
+    container_name: asaflive-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis-data:/data
+    command: redis-server --appendonly yes

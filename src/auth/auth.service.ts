@@ -40,7 +40,7 @@ export class AuthService {
         }
 
         const jwtPayload = {
-            username: "sajad"
+            id: user.id
         }
         const { access_token, refresh_token } = await this.generateTokenWithRsa(jwtPayload);
 
@@ -48,30 +48,29 @@ export class AuthService {
     }
 
 
+
+    // async verifyToken(key: string, token: string, token_type: 'refresh' | 'access') {
+
+    // }
+    async verifyRefreshToken(refresh_token: string) {
+        if (!process.env.JWT_PUBLIC) {
+            throw new InternalServerErrorException("public key not exist");
+        }
+        const payload = await this.jwtService.verifyAsync(refresh_token);
+        if (payload.type != 'refresh') {
+            throw new UnauthorizedException('Invalid token type');
+        }
+        return payload;
+    }
+
     async generateTokenWithRsa(payload: Object): Promise<{ access_token: string, refresh_token: string }> {
 
         if (!process.env.JWT_PRIVATE) {
             throw new InternalServerErrorException('JWT private key is not configured');
         }
-
-        const JWT_PRIVATE_KEY = process.env.JWT_PRIVATE.replaceAll('\\n', '\n');
-
-        const [access_token, refresh_token] = await Promise.all([this.jwtService.signAsync({
-            ...payload,
-            type: "access"
-        }, {
-            algorithm: 'RS256',
-            privateKey: JWT_PRIVATE_KEY,
-            expiresIn: '15m'
-        }),
-        this.jwtService.signAsync({
-            ...payload,
-            type: "refresh"
-        }, {
-            algorithm: 'RS256',
-            privateKey: JWT_PRIVATE_KEY,
-            expiresIn: '3650d'
-        })]);
+        const [access_token, refresh_token] = await Promise.all(
+            [this.jwtService.signAsync({ ...payload, type: "access" }), this.jwtService.signAsync({ ...payload, type: "refresh" })]
+        );
         return { access_token, refresh_token };
     }
 }

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, Query, Patch } from '@nestjs/common';
 import { RbacService } from './rbac.service';
 import { CreateRoleDto, UpdateRoleDto } from './dto/create-role.dto';
 import { CreatePermissionDto, UpdatePermissionDto } from './dto/create-permission.dto';
@@ -76,6 +76,12 @@ export class RbacController {
   //   @RequirePermissions('permissions:update')
   async updatePermission(@Param('id') id: string, @Body() dto: UpdatePermissionDto) {
     return await this.rbacService.updatePermission(id, dto);
+  }
+
+  // ── User Role Assignment ───────────────────────────────
+  @Patch('users/:userId/roles')
+  async assignRoleToUser(@Param('userId') userId: string, @Body('roleIds') roleIds: string[]) {
+    return await this.rbacService.assignRoleToUser(userId, roleIds);
   }
 
 
