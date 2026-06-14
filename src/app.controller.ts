@@ -3,12 +3,14 @@ import { AppService } from './app.service';
 import { User } from 'generated/prisma/client';
 
 
-@Controller()
+@Controller('health')
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(private readonly appService: AppService) { }
 
-  @Get()
-  async getHello(): Promise<User> {
-    return await this.appService.getHello();
+  @Get('redis')
+  async pingRedis() {
+    return {
+      redis: await this.appService.pingRedis()
+    }
   }
 }

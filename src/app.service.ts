@@ -2,19 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from './prisma/prisma.service';
 
 import { User } from 'generated/prisma/client'
+import { RedisService } from './common/redis/redis.service';
 
 @Injectable()
 export class AppService {
-  constructor(private prisma: PrismaService) { }
-  async getHello(): Promise<User> {
-    const user = await this.prisma.user.create({
-      data: {
-        phone: 'hendeseh20@gmail.com',
-        firstName: "sajad",
-        lastName: "sajad",
-        passwordHash: ""
-      }
-    });
-    return user;
+  constructor(private prisma: PrismaService, private redisServer: RedisService) { }
+  async pingRedis() {
+    return await this.redisServer.getClient().ping();
   }
 }

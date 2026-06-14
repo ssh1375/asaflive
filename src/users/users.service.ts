@@ -3,15 +3,14 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto, UpdateUserDto, UserSelect } from './dto/user.dto';
 import * as bcrypt from 'bcrypt';
 import { PaginationDto } from './dto/paginate.dto';
-
+import { RedisService } from 'src/common/redis/redis.service';
 
 @Injectable()
 export class UserService {
 
-    constructor(private prisma: PrismaService) { }
+    constructor(private prisma: PrismaService, private redisServer: RedisService) { }
 
     async create(dto: CreateUserDto) {
-
         const { password, ...data } = dto;
         // make password hashed
         return await this.prisma.user.create({
@@ -25,8 +24,7 @@ export class UserService {
 
     async findAll(paginateDto: PaginationDto) {
         return await this.prisma.user.findMany({
-            skip: paginateDto.skip,
-            take: paginateDto.limit,
+            ...paginateDto.paginate,
             select: UserSelect
         });
     }

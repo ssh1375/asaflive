@@ -9,13 +9,15 @@ import { Reflector } from '@nestjs/core';
 export class UserController {
 
     constructor(
-        private readonly userService: UserService,
+        private readonly userService: UserService, 
         private readonly reflector: Reflector // 2. Inject Reflector into the constructor
     ) { }
 
     @Post()
     @RequirePermissions('user:create')
     async create(@Body() dto: CreateUserDto) {
+
+        
         return await this.userService.create(dto);
     }
 

@@ -14,4 +14,12 @@ export class PaginationDto {
     limit: number = 20;
 
     get skip() { return (this.page - 1) * this.limit; }
+
+
+    get paginate() {
+        return {
+            take: this.limit,
+            skip: this.skip,
+        }
+    }
 }

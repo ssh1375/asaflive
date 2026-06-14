@@ -34,8 +34,7 @@ export class RbacService {
 
   async getRoles(paginateDto: PaginationDto) {
     return await this.prisma.role.findMany({
-      skip: paginateDto.skip,
-      take: paginateDto.limit,
+      ...paginateDto.paginate,
       select: {
         ...RoleSelect,
         domain: { select: DomainSelect },
@@ -86,8 +85,7 @@ export class RbacService {
 
   async getPermissions(paginateDto: PaginationDto) {
     return await this.prisma.permission.findMany({
-      skip: paginateDto.skip,
-      take: paginateDto.limit,
+      ...paginateDto.paginate,
       select: PermissionSelect
     });
   }
