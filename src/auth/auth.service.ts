@@ -8,6 +8,7 @@ import * as bcrypt from "bcrypt";
 import { User } from 'generated/prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import fs from "fs/promises"
+import { RedisService } from 'src/common/redis/redis.service';
 
 
 
@@ -17,7 +18,8 @@ export class AuthService {
     constructor(
         private prisma: PrismaService,
         private userService: UserService,
-        private jwtService: JwtService
+        private jwtService: JwtService,
+        private redisServer: RedisService
     ) { }
 
 
@@ -29,6 +31,7 @@ export class AuthService {
     async login(loginDto: LoginDto) {
         const user = await this.userService.findByPhone(loginDto.phone);
 
+        // check if user not active
         if (!user.isActive) {
             throw new ForbiddenException('User account is not active');
         }
@@ -42,6 +45,7 @@ export class AuthService {
         const jwtPayload = {
             id: user.id
         }
+
         const { access_token, refresh_token } = await this.generateTokenWithRsa(jwtPayload);
 
         return { access_token, refresh_token };
