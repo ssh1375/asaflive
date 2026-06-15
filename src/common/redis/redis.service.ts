@@ -8,6 +8,11 @@ export class RedisService {
         private readonly redis: RedisClientType,
     ) { }
 
+
+    async getAllKeys() {
+        const keys = await this.redis.keys('*');
+        return keys;
+    }
     async get(key: string) {
         return this.redis.get(key);
     }

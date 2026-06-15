@@ -2,6 +2,7 @@
 import { IsEmail, IsNotEmpty, IsOptional, IsString, IsPhoneNumber, MinLength } from 'class-validator';
 import { PartialType } from '@nestjs/mapped-types';
 import { Prisma } from 'generated/prisma/client';
+import * as bcrypt from 'bcrypt';
 
 
 /**
@@ -25,6 +26,7 @@ export class CreateUserDto {
     @IsNotEmpty({ message: 'Last name is required' })
     @IsString()
     lastName: string;
+
 }
 
 

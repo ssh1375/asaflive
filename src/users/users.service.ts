@@ -16,7 +16,7 @@ export class UserService {
         return await this.prisma.user.create({
             data: {
                 ...data,
-                passwordHash: await bcrypt.hash(password, Number(process.env.SALT_ROUND) || 12)
+                passwordHash: await this.generatePasswordHash(password, Number(process.env.SALT_ROUND))
             },
             select: UserSelect
         });
@@ -43,8 +43,26 @@ export class UserService {
     }
 
     async update(id: string, dto: UpdateUserDto) {
-        return await this.prisma.user.update({ where: { id }, data: dto, select: UserSelect });
+
+        const { password, ...otherField } = dto;
+
+        if (password) {
+            Object.assign(otherField, { passwordHash: await this.generatePasswordHash(password) })
+        }
+        return await this.prisma.user.update({
+            where: { id },
+            data: {
+                ...otherField,
+            },
+            select: UserSelect
+        });
     }
+
+
+    async generatePasswordHash(password: string, saltRound = 12) {
+        return await bcrypt.hash(password, saltRound);
+    }
+
 
     async remove(id: string) {
         return await this.prisma.user.delete({ where: { id }, select: UserSelect });

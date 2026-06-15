@@ -7,27 +7,28 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
+import { RedisService } from 'src/common/redis/redis.service';
 
 @Injectable()
-export class AuthGuard implements CanActivate {
-    constructor(private readonly jwtService: JwtService) { }
+export class SessionAuthGuard implements CanActivate {
+    constructor(private readonly redisService: RedisService) { }
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
-        const request = context.switchToHttp().getRequest();
-        const token = this.extractTokenFromHeader(request);
-        if (!token) {
-            throw new UnauthorizedException();
+
+        const req = context.switchToHttp().getRequest();
+
+        const sessionId = req.sessionID;
+
+        if (!sessionId) {
+            throw new UnauthorizedException('No session ID');
         }
-        try {
-            // 💡 Here the JWT secret key that's used for verifying the payload 
-            // is the key that was passed in the JwtModule
-            const payload = await this.jwtService.verifyAsync(token);
-            // 💡 We're assigning the payload to the request object here
-            // so that we can access it in our route handlers
-            request.user = payload;
-        } catch {
-            throw new UnauthorizedException();
+
+        const session = await this.redisService.get(`sess:${sessionId}`);
+
+        if (!session) {
+            throw new UnauthorizedException('Session expired');
         }
+
         return true;
     }
 

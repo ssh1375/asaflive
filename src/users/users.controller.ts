@@ -1,23 +1,24 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { UserService } from './users.service';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import { PaginationDto } from './dto/paginate.dto';
 import { RequirePermissions } from 'src/auth/permission-decorator';
 import { Reflector } from '@nestjs/core';
+import { SessionAuthGuard } from 'src/auth/auth.guard';
 
 @Controller('users')
 export class UserController {
 
     constructor(
-        private readonly userService: UserService, 
+        private readonly userService: UserService,
         private readonly reflector: Reflector // 2. Inject Reflector into the constructor
     ) { }
 
+
     @Post()
     @RequirePermissions('user:create')
+    @UseGuards(SessionAuthGuard)
     async create(@Body() dto: CreateUserDto) {
-
-        
         return await this.userService.create(dto);
     }
 

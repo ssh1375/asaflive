@@ -42,13 +42,7 @@ export class AuthService {
             throw new UnauthorizedException('Invalid credentials');
         }
 
-        const jwtPayload = {
-            id: user.id
-        }
-
-        const { access_token, refresh_token } = await this.generateTokenWithRsa(jwtPayload);
-
-        return { access_token, refresh_token };
+        return user;
     }
 
 

@@ -44,7 +44,7 @@ export class RbacController {
     return await this.rbacService.getRole(id);
   }
 
-  @Put('roles/:id')
+  @Patch('roles/:id')
   //   @RequirePermissions('roles:update')
   async updateRole(@Param('id') id: string, @Body() dto: CreateRoleDto) {
     return await this.rbacService.updateRole(id, dto);
@@ -69,7 +69,7 @@ export class RbacController {
     return await this.rbacService.getPermission(id);
   }
 
-  @Put('permissions/:id')
+  @Patch('permissions/:id')
   //   @RequirePermissions('permissions:update')
   async updatePermission(@Param('id') id: string, @Body() dto: UpdatePermissionDto) {
     return await this.rbacService.updatePermission(id, dto);

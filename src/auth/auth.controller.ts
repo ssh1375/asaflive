@@ -4,7 +4,8 @@ import {
     Res,
     Req,
     Get,
-    UseGuards
+    UseGuards,
+    InternalServerErrorException
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { RegisterDto } from './dto/register.dto';
@@ -13,7 +14,12 @@ import { CreateUserDto } from 'src/users/dto/user.dto';
 import { LoginDto } from './dto/login.dto';
 import { UserService } from 'src/users/users.service';
 import { RequirePermissions } from './permission-decorator';
-import { AuthGuard } from './auth.guard';
+import { SessionAuthGuard } from './auth.guard';
+import { promisify } from 'util';
+import { RedisService } from 'src/common/redis/redis.service';
+
+
+
 
 const ACCESS_TOKEN = 'access_token';
 const REFRESH_TOKEN = 'refresh_token';
@@ -30,6 +36,7 @@ const COOKIE_OPTIONS = {
 export class AuthController {
     constructor(
         private authService: AuthService,
+        private redis: RedisService,
         private userService: UserService) {
     }
 
@@ -43,30 +50,25 @@ export class AuthController {
     @HttpCode(HttpStatus.OK)
     async login(
         @Body() dto: LoginDto,
+        @Req() req: Request,
         @Res({ passthrough: true }) res: Response,
     ) {
 
-        const { access_token, refresh_token } = await this.authService.login(dto);
+        const user = await this.authService.login(dto);;
+        const saveSession = promisify(req.session.save).bind(req.session);
 
-        res.cookie('access_token', access_token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            maxAge: 15 * 60 * 1000, // 15 minutes in milliseconds
-            path: '/',
-        });
-        res.cookie('refresh_token', refresh_token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            maxAge: 10 * 365 * 24 * 60 * 60 * 1000, // 10 years in milliseconds
-            path: '/auth/refresh', // OPTIONAL: Restrict to refresh endpoint to save bandwidth
-        });
+        req.session['userId'] = user.id;
+
+        console.log(req.sessionID);
+
+
+        await saveSession();
 
         res.send({
             message: "login successfully"
         })
     }
+
 
     @Post('refresh')
     @HttpCode(HttpStatus.OK)
@@ -83,7 +85,7 @@ export class AuthController {
 
     @Post('logout')
     @HttpCode(HttpStatus.NO_CONTENT)
-    @UseGuards(AuthGuard)
+    @UseGuards(SessionAuthGuard)
     async logout(
         @Req() req: Request,
         @Res({ passthrough: true }) res: Response,
@@ -97,7 +99,7 @@ export class AuthController {
 
     @Get('me')
     // just authenticate the user
-    @UseGuards(AuthGuard)
+    @UseGuards(SessionAuthGuard)
     async me(@Req() req: Request) {
         const user = req['user'] as any;
         return await this.userService.findOne(user.id);
