@@ -54,19 +54,23 @@ export class AuthController {
         @Res({ passthrough: true }) res: Response,
     ) {
 
-        const user = await this.authService.login(dto);;
+        const regenerateSession = promisify(req.session.regenerate).bind(req.session);
+
+        await regenerateSession();
+
+        const user = await this.authService.login(dto);
+
         const saveSession = promisify(req.session.save).bind(req.session);
 
         req.session['userId'] = user.id;
 
-        console.log(req.sessionID);
-
-
         await saveSession();
 
-        res.send({
-            message: "login successfully"
-        })
+        console.log(await this.redis.get(`sess:${req.sessionID}`));
+        return {
+            message: "login with success"
+        }
+
     }
 
 
@@ -77,10 +81,10 @@ export class AuthController {
         @Res({ passthrough: true }) res: Response,
     ) {
         const refresh_token = req.cookies?.['refresh_token'];
-        const payload = await this.authService.verifyRefreshToken(refresh_token);
-        res.send({
-            payload
-        });
+        // const payload = await this.authService.verifyRefreshToken(refresh_token);
+        // res.send({
+        //     payload
+        // });
     }
 
     @Post('logout')

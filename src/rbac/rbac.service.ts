@@ -6,10 +6,12 @@ import { CreateDomainDto, DomainSelect } from './dto/create-domain.dto';
 import { PaginationDto } from 'src/users/dto/paginate.dto';
 import { UserSelect } from 'src/users/dto/user.dto';
 import { User } from 'generated/prisma/client';
+import { RedisService } from 'src/common/redis/redis.service';
+import { permission } from 'process';
 
 @Injectable()
 export class RbacService {
-  constructor(private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService, private redisService: RedisService) { }
   // ── Roles ──────────────────────────────────────────────
   async createRole(dto: CreateRoleDto) {
 
@@ -58,7 +60,7 @@ export class RbacService {
 
   // use CreateDto beacase user must provice permissionIds relations
   async updateRole(id: string, dto: CreateRoleDto) {
-    return await this.prisma.role.update({
+    const role = await this.prisma.role.update({
       where: { id },
       data: {
         ...dto,
@@ -72,6 +74,28 @@ export class RbacService {
         permissions: { select: PermissionSelect }
       },
     });
+
+    // if(dto.permissions) has been changed
+    // any user has this role should update in redis his or her 
+    // just del the key update would be done in permission guard
+    // you could do update in one place but let user iteself update it with th 
+    // name is changed all route work with permision named if change it should be update in redis cache
+    if (dto.permissions) {
+      const users = await this.prisma.user.findMany({
+        where: {
+          roles: {
+            some: {
+              id
+            }
+          }
+        }
+      });
+      const userPermissionsKey = users.map(user => `user:${user.id}:permissions`);
+      await this.redisService.del(userPermissionsKey);
+    }
+
+    return role;
+
   }
 
 
@@ -94,18 +118,42 @@ export class RbacService {
     return await this.prisma.permission.findFirstOrThrow({ where: { id }, select: PermissionSelect });
   }
 
+  // permission saved in redis if update the name user cahced permission should be updated.
   async updatePermission(id: string, dto: UpdatePermissionDto) {
-    return await this.prisma.permission.update({
+    const permission = await this.prisma.permission.update({
       where: { id },
       data: dto,
       select: PermissionSelect
     });
+
+    const users = await this.prisma.user.findMany({
+      where: {
+        roles: {
+          some: {
+            permissions: {
+              some: {
+                id
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // just del the key update would be done in permission guard
+    // you could do update in one place but let user iteself update it with th 
+    // name is changed all route work with permision named if change it should be update in redis cache
+    // search about event emiiter ssytem
+    if (dto.name) {
+      const userPermissionsKey = users.map(user => `user:${user.id}:permissions`);
+      await this.redisService.del(userPermissionsKey);
+    }
+    return permission;
   }
 
   // ── User Role Assignment ───────────────────────────────
   async assignRoleToUser(userId: string, roleIds: string[]) {
-    console.log('Assigning roles', roleIds, 'to user', userId);
-    return await this.prisma.user.update({
+    const user = await this.prisma.user.update({
       where: {
         id: userId
       },
@@ -126,6 +174,13 @@ export class RbacService {
         }
       }
     });
+
+    const userPermissions = user.roles.flatMap(role =>
+      role.permissions.map(p => p.name)
+    );
+    await this.redisService.set(`user:${user.id}:permissions`, JSON.stringify([...new Set(userPermissions)]));
+
+    return userPermissions;
   }
 
 
@@ -159,8 +214,7 @@ export class RbacService {
 
   async getDomains(paginateDto: PaginationDto) {
     return await this.prisma.domain.findMany({
-      skip: paginateDto.skip,
-      take: paginateDto.limit,
+      ...paginateDto.paginate,
       select: DomainSelect
     });
   }
