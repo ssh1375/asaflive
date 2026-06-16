@@ -144,8 +144,8 @@ export class AuthController {
     // just authenticate the user
     @UseGuards(SessionAuthGuard)
     async me(@Req() req: Request) {
-        const user = req['user'] as any;
-        return await this.userService.findOne(user.id);
+        const session = req.session as any;
+        return session?.['userId'];
     }
 
 }
