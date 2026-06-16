@@ -46,7 +46,7 @@ export class RbacController {
 
   @Patch('roles/:id')
   //   @RequirePermissions('roles:update')
-  async updateRole(@Param('id') id: string, @Body() dto: CreateRoleDto) {
+  async updateRole(@Param('id') id: string, @Body() dto: UpdateRoleDto) {
     return await this.rbacService.updateRole(id, dto);
   }
 
