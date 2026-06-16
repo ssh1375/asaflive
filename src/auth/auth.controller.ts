@@ -58,14 +58,6 @@ export class AuthController {
         @Res({ passthrough: true }) res: Response,
     ) {
 
-<<<<<<< HEAD
-        const user = await this.authService.login(dto);;
-
-        req.session['userId'] = user.id;
-
-        const saveSession = promisify(req.session.save).bind(req.session);
-
-=======
         const regenerateSession = promisify(req.session.regenerate).bind(req.session);
 
         await regenerateSession();
@@ -76,7 +68,6 @@ export class AuthController {
 
         req.session['userId'] = user.id;
 
->>>>>>> e30522a5a08a0cb3c8e6fafd82906f862289b725
         await saveSession();
         console.log(await this.redis.get(`sess:${req.sessionID}`));
 
