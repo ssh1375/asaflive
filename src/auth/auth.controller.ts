@@ -99,10 +99,20 @@ export class AuthController {
         @Req() req: Request,
         @Res({ passthrough: true }) res: Response,
     ) {
-        const token = req.cookies?.[REFRESH_TOKEN];
-        // await this.authService.logout(token);
-        res.clearCookie(REFRESH_TOKEN, { ...COOKIE_OPTIONS, maxAge: 0 });
-        res.clearCookie(ACCESS_TOKEN, { ...COOKIE_OPTIONS, maxAge: 0 });
+
+        const destroySession = promisify(req.session.destroy).bind(req.session);
+        try {
+            await destroySession()
+            res.clearCookie('connect.sid', { path: '/' });
+            return {
+                message: "logout with successs"
+            }
+        } catch (error) {
+            console.log(error);
+            return {
+                message: 'server error'
+            }
+        }
     }
 
 
@@ -141,7 +151,6 @@ export class AuthController {
     }
 
     @Get('me')
-    // just authenticate the user
     @UseGuards(SessionAuthGuard)
     async me(@Req() req: Request) {
         const session = req.session as any;
