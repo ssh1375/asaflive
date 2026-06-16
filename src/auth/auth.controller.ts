@@ -17,6 +17,7 @@ import { RequirePermissions } from './permission-decorator';
 import { SessionAuthGuard } from './auth.guard';
 import { promisify } from 'util';
 import { RedisService } from 'src/common/redis/redis.service';
+import { DiscoveryService, MetadataScanner, Reflector } from '@nestjs/core';
 
 
 
@@ -37,6 +38,9 @@ export class AuthController {
     constructor(
         private authService: AuthService,
         private redis: RedisService,
+        private readonly discoveryService: DiscoveryService,
+        private readonly metadataScanner: MetadataScanner,
+        private readonly reflector: Reflector,
         private userService: UserService) {
     }
 
@@ -55,14 +59,13 @@ export class AuthController {
     ) {
 
         const user = await this.authService.login(dto);;
-        const saveSession = promisify(req.session.save).bind(req.session);
 
         req.session['userId'] = user.id;
 
-        console.log(req.sessionID);
-
+        const saveSession = promisify(req.session.save).bind(req.session);
 
         await saveSession();
+        console.log(await this.redis.get(`sess:${req.sessionID}`));
 
         res.send({
             message: "login successfully"
@@ -96,6 +99,40 @@ export class AuthController {
         res.clearCookie(ACCESS_TOKEN, { ...COOKIE_OPTIONS, maxAge: 0 });
     }
 
+
+    @Get('services/permissions')
+    async getServicePermissions() {
+        const controllers = this.discoveryService.getControllers();
+        const permissions = new Set<string>();
+
+        // The metadata key you used in your @RequirePermissions decorator
+        // e.g., SetMetadata('permissions', permissions)
+        const PERMISSIONS_KEY = 'permissions';
+
+        controllers.forEach((wrapper) => {
+            const { instance } = wrapper;
+            if (!instance || typeof instance !== 'object') return;
+
+            // Get all methods on the controller prototype
+            const prototype = Object.getPrototypeOf(instance);
+
+            this.metadataScanner.getAllMethodNames(prototype).forEach((methodName) => {
+                // Read the metadata attached to the method
+                const methodPermissions = this.reflector.get<string[]>(
+                    PERMISSIONS_KEY,
+                    instance[methodName],
+                );
+
+                console.log(methodPermissions)
+
+                if (methodPermissions) {
+                    methodPermissions.forEach((p) => permissions.add(p));
+                }
+            });
+        });
+
+        return Array.from(permissions);
+    }
 
     @Get('me')
     // just authenticate the user

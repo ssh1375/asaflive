@@ -57,15 +57,17 @@ export class RbacService {
   }
 
   // use CreateDto beacase user must provice permissionIds relations
-  async updateRole(id: string, dto: CreateRoleDto) {
+  async updateRole(id: string, dto: UpdateRoleDto) {
+    const { permissions, ...others } = dto;
+    if (permissions && permissions.length) {
+      others['permissions'] = {
+        set: permissions.map((id: string) => ({ id }))
+      }
+    }
+
     return await this.prisma.role.update({
       where: { id },
-      data: {
-        ...dto,
-        permissions: {
-          set: dto.permissions.map((id: string) => ({ id })),
-        },
-      },
+      data: { ...others, },
       select: {
         ...RoleSelect,
         domain: { select: DomainSelect },

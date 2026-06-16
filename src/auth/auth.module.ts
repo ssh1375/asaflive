@@ -3,10 +3,12 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UserService } from 'src/users/users.service';
 import { JwtModule } from '@nestjs/jwt';
+import { DiscoveryModule, MetadataScanner, Reflector } from '@nestjs/core';
 
 
 @Module({
   imports: [
+    DiscoveryModule, MetadataScanner, Reflector,
     JwtModule.registerAsync({
       global: true,
       useFactory: () => ({
