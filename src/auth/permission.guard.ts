@@ -3,6 +3,7 @@ import {
     ExecutionContext,
     Injectable,
     ForbiddenException,
+    UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { PERMISSIONS_KEY } from './permission-decorator';
@@ -20,73 +21,67 @@ export class PermissionsGuard implements CanActivate {
     ) { }
 
     async canActivate(context: ExecutionContext) {
-        // 1. Extract required permissions from the route handler
-        // const requiredPermissions = this.reflector.getAllAndOverride<string[]>(
-        //     PERMISSIONS_KEY,
-        //     [context.getHandler(), context.getClass()],
-        // );
+
+        // 1. Get required permissions from the controller handler or class
+        const requiredPermissions = this.reflector.getAllAndOverride<string[]>(
+            PERMISSIONS_KEY,
+            [context.getHandler(), context.getClass()],
+        );
+        console.log(requiredPermissions, ' required per');
 
         // If no permissions are required, allow access
-        // if (!requiredPermissions || requiredPermissions.length === 0) {
-        //     return true;
-        // }
+        if (!requiredPermissions || requiredPermissions.length === 0) {
+            return true;
+        }
 
-        // 2. Get the user payload attached by AuthGuard
-        // const request = context.switchToHttp().getRequest();
-        // const user = request.user; // Usually contains { sub: userId, type: 'access', ... }
+        // 2. Get the user attached to the session
+        const request = context.switchToHttp().getRequest();
 
-        // if (!user || !user.sub) {
-        //     throw new ForbiddenException('Invalid user context');
-        // }
+        // Using express-session, we access the session directly.
+        // If your session is attached differently (e.g., req.sess), adjust accordingly.
+        const session = request.session;
 
-        // 3. Attempt to get user session data from Redis
-        // const cacheKey = `user:${user.sub}:sessionData`;
-        // let sessionDataStr = await this.redisService.get(cacheKey);
-        // let sessionData;
+        if (!session || !session.userId) {
+            throw new UnauthorizedException('User is not authenticated');
+        }
 
-        // if (sessionDataStr) {
-        //     // Cache Hit
-        //     sessionData = JSON.parse(sessionDataStr);
-        // } else {
-        //     // 4. Cache Miss (Lazy Loading): Fetch from DB
-        //     const dbUser = await this.prismaService.user.findUnique({
-        //         where: { id: user.sub },
-        //         select: {
-        //             isActive: true,
-        //             // Adjust this based on your actual Prisma schema relation
-        //             permissions: { select: { name: true } }
-        //         },
-        //     });
+        const cacheKey = `user:${session.userId}:permissions`;
 
-        // if (!dbUser) {
-        //     throw new ForbiddenException('User not found');
-        // }
+        const permissions = await this.redisService.get(cacheKey);
 
-        // Map DB structure to our cached structure
-        // sessionData = {
-        //     isActive: dbUser.isActive,
-        //     permissions: dbUser.permissions.map(p => p.name),
-        // };
+        let userPermissions: string[];
+        // if permisiin is [] go else if permision has items go else if it is undefined or null fetch from db
+        if (!permissions) {
+            const user = await this.prismaService.user.findFirstOrThrow({
+                where: {
+                    id: session.userId
+                },
+                include: {
+                    roles: {
+                        include: {
+                            permissions: true
+                        }
+                    }
+                }
+            });
+            userPermissions = user.roles.flatMap(role =>
+                role.permissions.map(p => p.name)
+            );
+            console.log('permision not exit for user in redis created. ', cacheKey, JSON.stringify(userPermissions));
+            await this.redisService.set(cacheKey, JSON.stringify([...new Set(userPermissions)]));
 
-        // Save to Redis (e.g., expire in 1 hour or keep indefinitely until updated)
-        // await this.redisService.set(cacheKey, JSON.stringify(sessionData), 3600);
-        // }
+        } else {
+            userPermissions = JSON.parse(permissions);
+            console.log("permision is exist ", userPermissions);
+        }
 
-        // 5. Instantly check isActive status
-        // if (sessionData.isActive !== true) {
-        //     throw new ForbiddenException('Account is disabled');
-        // }
+        // not check permisions to be mathced.
 
-        // // 6. Check if user has ALL required permissions (AND logic)
-        // // If you want OR logic, use .some() instead of .every()
-        // const hasPermissions = requiredPermissions.every((permission) =>
-        //     sessionData.permissions.includes(permission),
-        // );
-
-        // if (!hasPermissions) {
-        //     throw new ForbiddenException('Insufficient permissions');
-        // }
-
+        for (const rPermission of requiredPermissions) {
+            if (!userPermissions.includes(rPermission)) {
+                return false;
+            }
+        }
         return true;
     }
 }
