@@ -154,7 +154,7 @@ export class AuthController {
     @UseGuards(SessionAuthGuard)
     async me(@Req() req: Request) {
         const session = req.session as any;
-        return session?.['userId'];
+        return await this.authService.me(session?.['userId']);
     }
 
 }

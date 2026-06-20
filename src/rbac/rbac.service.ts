@@ -60,43 +60,44 @@ export class RbacService {
 
   // use CreateDto beacase user must provice permissionIds relations
   async updateRole(id: string, dto: UpdateRoleDto) {
-    const { permissions, ...others } = dto;
-    if (permissions && permissions.length) {
-      others['permissions'] = {
-        set: permissions.map((id: string) => ({ id }))
-      }
-    }
+    return dto;
+    // const { permissions, ...others } = dto;
+    // if (permissions && permissions.length) {
+    //   others['permissions'] = {
+    //     set: permissions.map((id: string) => ({ id }))
+    //   }
+    // }
 
-    const role = await this.prisma.role.update({
-      where: { id },
-      data: { ...others, },
-      select: {
-        ...RoleSelect,
-        domain: { select: DomainSelect },
-        permissions: { select: PermissionSelect }
-      },
-    });
+    // const role = await this.prisma.role.update({
+    //   where: { id },
+    //   data: { ...others, },
+    //   select: {
+    //     ...RoleSelect,
+    //     domain: { select: DomainSelect },
+    //     permissions: { select: PermissionSelect }
+    //   },
+    // });
 
     // if(dto.permissions) has been changed
     // any user has this role should update in redis his or her 
     // just del the key update would be done in permission guard
     // you could do update in one place but let user iteself update it with th 
     // name is changed all route work with permision named if change it should be update in redis cache
-    if (dto.permissions) {
-      const users = await this.prisma.user.findMany({
-        where: {
-          roles: {
-            some: {
-              id
-            }
-          }
-        }
-      });
-      const userPermissionsKey = users.map(user => `user:${user.id}:permissions`);
-      await this.redisService.del(userPermissionsKey);
-    }
+    // if (dto.permissions) {
+    //   const users = await this.prisma.user.findMany({
+    //     where: {
+    //       roles: {
+    //         some: {
+    //           id
+    //         }
+    //       }
+    //     }
+    //   });
+    //   const userPermissionsKey = users.map(user => `user:${user.id}:permissions`);
+    //   await this.redisService.del(userPermissionsKey);
+    // }
 
-    return role;
+    // return role;
 
   }
 

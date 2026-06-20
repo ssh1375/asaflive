@@ -46,6 +46,9 @@ export class AuthService {
     }
 
 
+    async me(userId: string) {
+        return await this.userService.findOne(userId);
+    }
 
     // async verifyToken(key: string, token: string, token_type: 'refresh' | 'access') {
 
