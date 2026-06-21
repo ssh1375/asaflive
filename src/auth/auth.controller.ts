@@ -93,7 +93,7 @@ export class AuthController {
     }
 
     @Post('logout')
-    @HttpCode(HttpStatus.NO_CONTENT)
+    @HttpCode(HttpStatus.OK)
     @UseGuards(SessionAuthGuard)
     async logout(
         @Req() req: Request,
@@ -105,7 +105,7 @@ export class AuthController {
             await destroySession()
             res.clearCookie('connect.sid', { path: '/' });
             return {
-                message: "logout with successs"
+                message: "logout with success"
             }
         } catch (error) {
             console.log(error);
