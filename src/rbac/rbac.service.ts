@@ -60,45 +60,43 @@ export class RbacService {
 
   // use CreateDto beacase user must provice permissionIds relations
   async updateRole(id: string, dto: UpdateRoleDto) {
-    return dto;
-    // const { permissions, ...others } = dto;
-    // if (permissions && permissions.length) {
-    //   others['permissions'] = {
-    //     set: permissions.map((id: string) => ({ id }))
-    //   }
-    // }
+    const { permissions, ...others } = dto;
+    if (permissions && permissions.length) {
+      others['permissions'] = {
+        set: permissions.map((id: string) => ({ id }))
+      }
+    }
 
-    // const role = await this.prisma.role.update({
-    //   where: { id },
-    //   data: { ...others, },
-    //   select: {
-    //     ...RoleSelect,
-    //     domain: { select: DomainSelect },
-    //     permissions: { select: PermissionSelect }
-    //   },
-    // });
+    const role = await this.prisma.role.update({
+      where: { id },
+      data: { ...others, },
+      select: {
+        ...RoleSelect,
+        domain: { select: DomainSelect },
+        permissions: { select: PermissionSelect }
+      },
+    });
 
     // if(dto.permissions) has been changed
     // any user has this role should update in redis his or her 
     // just del the key update would be done in permission guard
     // you could do update in one place but let user iteself update it with th 
     // name is changed all route work with permision named if change it should be update in redis cache
-    // if (dto.permissions) {
-    //   const users = await this.prisma.user.findMany({
-    //     where: {
-    //       roles: {
-    //         some: {
-    //           id
-    //         }
-    //       }
-    //     }
-    //   });
-    //   const userPermissionsKey = users.map(user => `user:${user.id}:permissions`);
-    //   await this.redisService.del(userPermissionsKey);
-    // }
-
-    // return role;
-
+    if (dto.permissions) {
+      const users = await this.prisma.user.findMany({
+        where: {
+          roles: {
+            some: {
+              id
+            }
+          }
+        }
+      });
+      const userPermissionsKey = users.map(user => `user:${user.id}:permissions`);
+      if (userPermissionsKey.length)
+        await this.redisService.del(userPermissionsKey);
+    }
+    return role;
   }
 
 
@@ -149,7 +147,9 @@ export class RbacService {
     // search about event emiiter ssytem
     if (dto.name) {
       const userPermissionsKey = users.map(user => `user:${user.id}:permissions`);
-      await this.redisService.del(userPermissionsKey);
+      if (userPermissionsKey.length) {
+        await this.redisService.del(userPermissionsKey);
+      }
     }
     return permission;
   }
@@ -181,7 +181,10 @@ export class RbacService {
     const userPermissions = user.roles.flatMap(role =>
       role.permissions.map(p => p.name)
     );
-    await this.redisService.set(`user:${user.id}:permissions`, JSON.stringify([...new Set(userPermissions)]));
+
+    if (userPermissions.length)
+      await this.redisService.set(`user:${user.id}:permissions`, JSON.stringify([...new Set(userPermissions)]));
+
 
     return userPermissions;
   }

@@ -7,10 +7,10 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: asaflive
-    ports:
-      - "5432:5432"
     volumes:
       - ./data:/var/lib/postgresql
+    networks:
+      - backend
 
   redis:
     image: redis:alpine
@@ -20,4 +20,42 @@ services:
       - "6379:6379"
     volumes:
       - ./redis-data:/data
-    command: redis-server --appendonly yes --requirepass "redisPasdss!@#"
+    networks:
+      - backend
+    command: redis-server --appendonly yes --requirepass "redisPasdss"
+
+
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: asaflive-livekit
+    restart: always
+    command: --config /etc/livekit.yaml
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml
+    # This binds all LiveKit ports directly to the host OS
+    network_mode: host
+
+
+
+  api:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: asaflive-api
+    restart: always
+    ports:
+      - "3000:3000"
+    # Load environment variables from the .env file
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - backend
+
+
+
+networks:
+  backend:
+    driver: bridge
