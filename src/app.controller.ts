@@ -1,11 +1,21 @@
 import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
-import { User } from 'generated/prisma/client';
 
 
 @Controller('health')
 export class AppController {
   constructor(private readonly appService: AppService) { }
+
+
+
+  @Get()
+  async api() {
+    return {
+      message: 'success'
+    }
+  }
+
+
 
   @Get('redis')
   async pingRedis() {

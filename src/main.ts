@@ -9,28 +9,38 @@ import { RedisService } from './common/redis/redis.service';
 import { RedisStore } from 'connect-redis';
 import { ConfigService } from '@nestjs/config';
 import { randomBytes } from 'crypto';
+import { NestExpressApplication } from '@nestjs/platform-express';
+
 
 async function bootstrap() {
 
-  const app = await NestFactory.create(AppModule);
-
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
 
   app.use(cookieParser());
 
+
+  app.set('trust proxy', 1);
+
+
+  app.setGlobalPrefix('api');
+
   const configService = app.get(ConfigService);
-  console.log(configService.get<string>('SESSION_SECRET'))
   app.use(
     session({
       genid: () => randomBytes(128).toString('hex'),
-      store: new RedisStore({ client: app.get(RedisService).getClient() }),
+      store: new RedisStore({ client: app.get(RedisService).getClient(), prefix: "asaflive:session:" }),
       secret: configService.get<string>('SESSION_SECRET') || 'secret',
       resave: false,
       saveUninitialized: false,
       cookie: {
+        // for js could not access the cookie and session ID
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        // if cros want to be work secure must be true
+        secure: true,
+        // for cros to be work sameSite: none
+        sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'none',
+        // the max age of cookie
         maxAge: 1000 * 60 * 60 * 24,
       },
     }),

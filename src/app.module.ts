@@ -7,11 +7,12 @@ import { RbacModule } from './rbac/rbac.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { RedisModule } from './common/redis/redis.module';
+import { LivekitModule } from './livekit/livekit.module';
 
 @Module({
   imports: [PrismaModule, ConfigModule.forRoot({
     isGlobal: true
-  }), RbacModule, UsersModule, AuthModule, RedisModule],
+  }), RbacModule, UsersModule, AuthModule, RedisModule, LivekitModule],
   controllers: [AppController],
   providers: [AppService],
 })

@@ -18,13 +18,17 @@ export class SessionAuthGuard implements CanActivate {
         const req = context.switchToHttp().getRequest();
 
         const sessionId = req.sessionID;
+        console.log(sessionId, ' session id for auth');
 
         if (!sessionId) {
             throw new UnauthorizedException('No session ID');
         }
 
-        const session = await this.redisService.get(`sess:${sessionId}`);
+        console.log(req.cookies, " cookie");
 
+        const session = await this.redisService.get(`asaflive:session:${sessionId}`);
+
+        console.log('find session in redis ', `asaflive:session:${sessionId}`, session);
         if (!session) {
             throw new UnauthorizedException('Session expired');
         }
@@ -32,8 +36,4 @@ export class SessionAuthGuard implements CanActivate {
         return true;
     }
 
-    private extractTokenFromHeader(request: Request): string | undefined {
-        return request.cookies?.['access_token'];
-
-    }
 }
