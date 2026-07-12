@@ -16,12 +16,9 @@ async function bootstrap() {
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-
   app.use(cookieParser());
 
-
   app.set('trust proxy', 1);
-
 
   app.setGlobalPrefix('api');
 
@@ -65,10 +62,7 @@ async function bootstrap() {
     exceptionFactory: (errors) => new BadRequestException(errors),
   }));
 
-
-
   app.useGlobalFilters(new PrismaExceptionFilter);
-
 
   await app.listen(process.env.PORT || 3000, '0.0.0.0');
 }

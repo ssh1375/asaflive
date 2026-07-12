@@ -5,12 +5,14 @@ services:
     restart: always
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: asafpostgress724
       POSTGRES_DB: asaflive
+    ports:
+      - "5432:5432"
     volumes:
       - ./data:/var/lib/postgresql
-    networks:
-      - backend
+    # networks:
+    #   - backend
 
   redis:
     image: redis:alpine
@@ -20,13 +22,13 @@ services:
       - "6379:6379"
     volumes:
       - ./redis-data:/data
-    networks:
-      - backend
+    # networks:
+    #   - backend
     command: redis-server --appendonly yes --requirepass "redisPasdss"
 
 
   livekit:
-    image: livekit/livekit-server:latest
+    image: livekit/livekit-server:v1.13.3
     container_name: asaflive-livekit
     restart: always
     command: --config /etc/livekit.yaml
@@ -36,26 +38,26 @@ services:
     network_mode: host
 
 
+  egress:
+    image: livekit/egress:v1.13
+    restart: unless-stopped
+    cap_add:
+      - SYS_ADMIN # کروم بدون این کار نمی‌کند
+    security_opt:
+      - seccomp=unconfined # غیرفعال کردن محدودیت‌های سیستم‌کال برای کروم
+    devices:
+      - /dev/snd:/dev/snd # دسترسی مستقیم به دیوایس‌های کارت صدا در لینوکس
 
-  api:
-    build: 
-      context: .
-      dockerfile: Dockerfile
-    container_name: asaflive-api
-    restart: always
-    ports:
-      - "3000:3000"
-    # Load environment variables from the .env file
-    env_file:
-      - .env
+    volumes:
+      # Mount the config file
+      - ./egress.yaml:/etc/egress.yaml
+      # Mount the folder where you want recordings saved
+      - /home/recording:/home
+
+    # the entrypoint file not find config file do not use command command: --config /etc/egress.yaml
+    # the entry point not append --config  yaml in last line of entrypoint.sh!
+    environment:
+      - EGRESS_CONFIG_FILE=/etc/egress.yaml
     depends_on:
-      - postgres
       - redis
-    networks:
-      - backend
 
-
-
-networks:
-  backend:
-    driver: bridge

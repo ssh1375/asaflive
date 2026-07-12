@@ -65,21 +65,101 @@ model User {
   isPhoneVerified Boolean   @default(false)
   lastLoginAt     DateTime?
   roles           Role[]
-  refresh_tokens  RefreshToken[]
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 }
 
 
-model RefreshToken {
-  id        String    @id @default(uuid())
-  token     String    @unique
-  used      Boolean   @default(false)
-  revokedAt DateTime? @map("revoked_at")
-  expiresAt DateTime  @map("expires_at")
-  createdAt DateTime  @default(now()) @map("created_at")
-  userId    String    @map("user_id")
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("refresh_tokens")
+
+model Meeting {
+  id              String   @id @default(uuid())
+  name            String
+  emptyTimeout    Int
+  maxParticipants Int
+  sessionExpiry   Int
+  metadata        Json
+
+  // فیلدهای زمان
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // ارتباط با کاربرانی که به جلسه دعوت شده‌اند
+  participants    MeetingParticipant[]
+}
+
+
+model MeetingParticipant {
+  id          String   @id @default(uuid())
+  
+  meetingId   String
+  meeting     Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  
+  // 1. Registered Site User (Optional)
+  // If the person is logged in, this field will be populated
+  userId      String?  
+  // user     User?    @relation(fields: [userId], references: [id]) 
+  
+  // 2. Guest Information (Mandatory or optional depending on your logic)
+  // The name displayed in the meeting (whether a registered user or a guest)
+  displayName String   
+  
+  // 3. Invitation Token (Crucial for guests)
+  // For anonymous guests, you generate a unique link containing this token
+  // Example: mydomain.com/join?token=abc-123
+  inviteToken String?  @unique 
+  
+  phone       String   //phone number
+  role        String   @default("GUEST") // HOST, GUEST
+  isInvited   Boolean  @default(true)
+  joinedAt    DateTime? 
+
+  createdAt   DateTime @default(now())
+  
+  // Note: When userId can be null, using a composite unique constraint is tricky.
+  // We removed the database-level unique constraint here. You should handle duplicate user prevention logic inside your NestJS code.
+}
+
+
+model Recording {
+  id          String            @id @default(uuid())
+
+  meetingId   String
+  meeting     Meeting           @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  egressId    String            @unique
+  roomName    String
+
+  status      RecordingStatus   @default(STARTING)
+
+  filename    String?
+  filepath    String?
+  location    String?
+
+  size        BigInt?
+  duration    BigInt?
+
+  startedAt   DateTime?
+  endedAt     DateTime?
+
+  error       String?
+  errorCode   Int?
+  details     String?
+
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([meetingId])
+  @@index([egressId])
+  @@index([roomName])
+  @@index([status])
+}
+
+enum RecordingStatus {
+  STARTING
+  ACTIVE
+  STOPPING
+  FINISHED
+  FAILED
+  LIMIT_REACHED
 }

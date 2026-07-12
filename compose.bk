@@ -1,0 +1,24 @@
+  # api:
+  #   build: 
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: asaflive-api
+  #   restart: always
+  #   ports:
+  #     - "3000:3000"
+  #   # Load environment variables from the .env file
+  #   env_file:
+  #     - .env
+  #   depends_on:
+  #     - postgres
+  #     - redis
+  #   networks:
+  #     - backend
+
+  #   extra_hosts:
+  #     - "host.docker.internal:host-gateway"
+
+
+# networks:
+#   backend:
+#     driver: bridge

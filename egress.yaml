@@ -1,0 +1,8 @@
+api_key: "cba015a37cfe895"
+api_secret: "fba403ccabf44d"
+ws_url: "wss://asaflive.ir" 
+redis:
+  address: "redis:6379" 
+  password: "redisPasdss"
+
+  
