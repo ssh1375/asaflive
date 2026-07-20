@@ -69,9 +69,7 @@ export class AuthController {
         req.session['userId'] = user.id;
 
         await saveSession();
-        console.log(await this.redis.get(`sess:${req.sessionID}`));
 
-        console.log(await this.redis.get(`sess:${req.sessionID}`));
         return {
             message: "login with success"
         }

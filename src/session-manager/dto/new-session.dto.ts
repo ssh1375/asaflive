@@ -1,4 +1,5 @@
 import { IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, Max, Min } from "class-validator";
+import { Prisma } from "generated/prisma/browser";
 
 export class NewSessionDto {
     @IsString()
@@ -7,8 +8,8 @@ export class NewSessionDto {
 
     // describe in second for close the session if room is empty
     @IsNumber()
-    @Min(300)
-    @Max(900)
+    @Min(10)
+    @Max(1200)
     emptyTimeout: number;
 
     @IsNumber()

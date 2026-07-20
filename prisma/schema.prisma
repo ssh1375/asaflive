@@ -80,6 +80,8 @@ model Meeting {
   sessionExpiry   Int
   metadata        Json
 
+  egressdata      Json?
+
   // فیلدهای زمان
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -121,45 +123,3 @@ model MeetingParticipant {
 }
 
 
-model Recording {
-  id          String            @id @default(uuid())
-
-  meetingId   String
-  meeting     Meeting           @relation(fields: [meetingId], references: [id], onDelete: Cascade)
-
-  egressId    String            @unique
-  roomName    String
-
-  status      RecordingStatus   @default(STARTING)
-
-  filename    String?
-  filepath    String?
-  location    String?
-
-  size        BigInt?
-  duration    BigInt?
-
-  startedAt   DateTime?
-  endedAt     DateTime?
-
-  error       String?
-  errorCode   Int?
-  details     String?
-
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-
-  @@index([meetingId])
-  @@index([egressId])
-  @@index([roomName])
-  @@index([status])
-}
-
-enum RecordingStatus {
-  STARTING
-  ACTIVE
-  STOPPING
-  FINISHED
-  FAILED
-  LIMIT_REACHED
-}

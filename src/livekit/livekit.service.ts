@@ -1,8 +1,8 @@
-import { Injectable, Logger, Res } from '@nestjs/common';
+import { ConflictException, Injectable, Logger, Res } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AccessToken, WebhookReceiver, RoomServiceClient } from 'livekit-server-sdk';
 import { NewSessionDto } from 'src/session-manager/dto/new-session.dto';
-import { EgressClient, EncodedFileOutput, EncodedFileType } from 'livekit-server-sdk';
+import { EgressClient, EgressStatus, EncodedFileOutput, EncodedFileType } from 'livekit-server-sdk';
 import * as path from 'path';
 
 
@@ -38,7 +38,6 @@ export class LivekitService {
 
     async createRoom(session: NewSessionDto) {
 
-        let room;
         // where is the server how to connect to server
         const roomService = new RoomServiceClient(
             process.env.LIVEKIT_URL || '',
@@ -46,28 +45,76 @@ export class LivekitService {
             this.configService.getOrThrow<string>('LIVEKIT_API_SECRET')
         );
 
+
+        const rooms = await this.roomService.listRooms();
+
+        if (rooms.length > 1) {
+            console.log('other room exists: ', rooms);
+            throw new ConflictException(rooms);
+        }
+
+
+
+        console.log(session);
         // create custom room in server
-        room = await roomService.createRoom({
+        const room = await roomService.createRoom({
             ...session,
             metadata: JSON.stringify(session.metadata)
         });
+        console.log('room created: ', room);
 
-        console.log('Room created successfully:', room.name, ' ', this.configService.getOrThrow<string>('LIVEKIT_RECORDING_BASE_URL'), `${room.name} - ${Date.now()}.mp4`);
+        const fileName = path.join(this.configService.getOrThrow<string>('LIVEKIT_RECORDING_BASE_URL'), `${room.name}.mp4`);
+
+        console.log('Room created successfully:', fileName);
 
         const fileOutput = new EncodedFileOutput({
             fileType: EncodedFileType.MP4,
-            filepath: path.join(this.configService.getOrThrow<string>('LIVEKIT_RECORDING_BASE_URL'), `${room.name} - ${Date.now()}.mp4`),
+            filepath: fileName,
         });
 
-        const egressInfo = await this.egressClient.startRoomCompositeEgress(
+        const egress = await this.egressClient.startRoomCompositeEgress(
             room.name,
             { file: fileOutput },
-            { layout: 'grid' }
+            { layout: 'grid' });
+
+        console.log(`Started recording for room ${room.name}. Egress ID: ${egress.egressId}`);
+
+        return { room, egress };
+    }
+
+
+    async checkRecordingStatus(egressId: string) {
+        // Fetch all egresses for the specific room
+        const egresses = await this.egressClient.listEgress({ egressId });
+
+        // Check if any egress is currently active or starting
+        const isRecording = egresses.some((egress) =>
+            egress.status === EgressStatus.EGRESS_ACTIVE ||
+            egress.status === EgressStatus.EGRESS_STARTING
         );
 
-        console.log(`Started recording for room ${room.name}. Egress ID: ${egressInfo.egressId}`, ' ', egressInfo);
-        return { room, egress: egressInfo };
+        if (isRecording) {
+            console.log(`Recording is currently in progress for room: ${egressId}`);
+        } else {
+            console.log(`No active recordings for room: ${egressId}`);
+        }
+
+        return isRecording;
     }
+
+
+
+    async deleteRooms() {
+        const rooms = await this.roomService.listRooms();
+        // 2. Loop through and delete each room
+        for (const room of rooms) {
+            await this.roomService.deleteRoom(room.name);
+            console.log(`Deleted room: ${room.name}`);
+        }
+
+        return { message: `Successfully closed ${rooms.length} rooms.` };
+    }
+
 
     async startSessionRecording(roomName: string) {
 

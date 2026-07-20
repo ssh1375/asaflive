@@ -36,10 +36,17 @@ services:
       - ./livekit.yaml:/etc/livekit.yaml
     # This binds all LiveKit ports directly to the host OS
     network_mode: host
+    depends_on:
+      - redis
 
 
   egress:
-    image: livekit/egress:v1.13
+    image: livekit/egress:v1.10
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'       # Maximum CPU cores this container can use
+          memory: 8G        # Maximum memory (Hard limit, container is killed if it exceeds this)
     restart: unless-stopped
     cap_add:
       - SYS_ADMIN # کروم بدون این کار نمی‌کند
@@ -47,17 +54,18 @@ services:
       - seccomp=unconfined # غیرفعال کردن محدودیت‌های سیستم‌کال برای کروم
     devices:
       - /dev/snd:/dev/snd # دسترسی مستقیم به دیوایس‌های کارت صدا در لینوکس
-
     volumes:
       # Mount the config file
       - ./egress.yaml:/etc/egress.yaml
       # Mount the folder where you want recordings saved
-      - /home/recording:/home
+      - /home/recording:/out
 
     # the entrypoint file not find config file do not use command command: --config /etc/egress.yaml
     # the entry point not append --config  yaml in last line of entrypoint.sh!
     environment:
       - EGRESS_CONFIG_FILE=/etc/egress.yaml
+      - EGRESS_LOG_LEVEL=debug
+    network_mode: host
     depends_on:
       - redis
 

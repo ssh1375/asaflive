@@ -18,17 +18,14 @@ export class SessionAuthGuard implements CanActivate {
         const req = context.switchToHttp().getRequest();
 
         const sessionId = req.sessionID;
-        console.log(sessionId, ' session id for auth');
+        // console.log(sessionId, ' session id for auth');
 
         if (!sessionId) {
             throw new UnauthorizedException('No session ID');
         }
 
-        console.log(req.cookies, " cookie");
-
         const session = await this.redisService.get(`asaflive:session:${sessionId}`);
 
-        console.log('find session in redis ', `asaflive:session:${sessionId}`, session);
         if (!session) {
             throw new UnauthorizedException('Session expired');
         }

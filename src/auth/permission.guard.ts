@@ -27,7 +27,8 @@ export class PermissionsGuard implements CanActivate {
             PERMISSIONS_KEY,
             [context.getHandler(), context.getClass()],
         );
-        console.log(requiredPermissions, ' required per');
+
+        // console.log(requiredPermissions, ' required per');
 
         // If no permissions are required, allow access
         if (!requiredPermissions || requiredPermissions.length === 0) {
@@ -67,12 +68,12 @@ export class PermissionsGuard implements CanActivate {
             userPermissions = user.roles.flatMap(role =>
                 role.permissions.map(p => p.name)
             );
-            console.log('permision not exit for user in redis created. ', cacheKey, JSON.stringify(userPermissions));
+            // console.log('permision not exit for user in redis created. ', cacheKey, JSON.stringify(userPermissions));
             await this.redisService.set(cacheKey, JSON.stringify([...new Set(userPermissions)]));
 
         } else {
             userPermissions = JSON.parse(permissions);
-            console.log("permision is exist ", userPermissions);
+            // console.log("permision is exist ", userPermissions);
         }
 
         // not check permisions to be mathced.

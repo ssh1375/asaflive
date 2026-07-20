@@ -1,29 +1,48 @@
-import { ForbiddenException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { ForbiddenException, Injectable, InternalServerErrorException, NotFoundException, StreamableFile } from '@nestjs/common';
 import { LivekitService } from 'src/livekit/livekit.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { NewSessionDto } from './dto/new-session.dto';
 import { InviteMeetingDto } from './dto/invite.dto';
 import { PaginationDto } from 'src/users/dto/paginate.dto';
+import * as crypto from 'crypto';
+import { createReadStream, statSync, existsSync } from 'fs';
+
+import * as path from 'path';
+import { ConfigService } from '@nestjs/config';
+
 
 @Injectable()
 export class SessionManagerService {
 
     constructor(private prismaService: PrismaService,
-        private livekitService: LivekitService
+        private livekitService: LivekitService,
+        private readonly configService: ConfigService
     ) {
 
     }
 
     async getAll(paginate: PaginationDto) {
-        return await this.prismaService.meeting.findMany({
-            where: {
+        const whereCondition = {};
 
-            },
-            ...paginate.paginate,
-            orderBy: {
-                createdAt: 'desc'
-            }
-        })
+        const [data, count] = await this.prismaService.$transaction([
+            this.prismaService.meeting.findMany({
+                where: whereCondition,
+                ...paginate.paginate,
+                orderBy: {
+                    createdAt: 'desc'
+                },
+                select: {
+                    id: true,
+                    name: true,
+                    metadata: true,
+                    createdAt: true
+                }
+            }),
+            this.prismaService.meeting.count({
+                where: whereCondition,
+            })
+        ])
+        return { count, data }
     }
 
     async createNewSession(session: NewSessionDto) {
@@ -31,33 +50,43 @@ export class SessionManagerService {
         // first create it into db and use id as name of session to distinc all session
         // if two session has one name new new override the property into last one
 
+        // name in livekit should be unique you cannot create two room same time
+        // use id as name to two room mistake name could be avoided
+        // the name that user input save as name in meeting model
+        const livekitRoomName = crypto.randomUUID();
+        const { name, ...rest } = session;
+
+        // adding some unique udentifier to room name
+        const { room, egress } = await this.livekitService.createRoom({
+            name: livekitRoomName,
+            ...rest
+        });
+
+        // adding unqiue room name to meta data of meeting
+        session.metadata = { livekitRoomName, ...session.metadata };
+        // // create meeting with unique name
         const meeting = await this.prismaService.meeting.create({
             data: {
-                ...session
+                ...session,
+                id: room.sid,
+                egressdata: JSON.stringify(egress)
             }
         });
 
-        // name in livekit should be unique you cannot create two room same time
-        // use id as name to two room mistake name could be avoided
-
-        const { room, egress } = await this.livekitService.createRoom({
-            ...session,
-            name: meeting.id
-        })
-
-
-        return { meeting, room };
-    }
-
-
-
-    async startRecording() {
+        return {
+            meetingId: meeting.id,
+            egress: {
+                id: egress?.egressId,
+                status: egress?.status
+            }
+        };
 
     }
 
-    async stopRecording() {
-
+    async roomRecordingStatus(egressId: string) {
+        return await this.livekitService.checkRecordingStatus(egressId);
     }
+
 
     async inviteParticipant(inviteDto: InviteMeetingDto, meeting_id: string) {
 
@@ -93,9 +122,10 @@ export class SessionManagerService {
         try {
             // 4. SECOND: Generate Token using the generated DB ID
             // فرض می‌کنیم شناسه جلسه همان نام روم در لایوکیت است
+            console.log(meeting?.metadata)
             const token = await this.livekitService.generateParticipantToken(
                 // room
-                meeting.id,
+                meeting?.metadata?.['livekitRoomName'],
                 inviteDto.permissions,
                 meetingParticipant.id, // identity (گرفته شده از دیتابیس)
                 inviteDto.displayName
@@ -130,6 +160,13 @@ export class SessionManagerService {
     }
 
 
+    async getLivekitRoomFile(livekitRoomname: string) {
+        const filename = path.join(this.configService.getOrThrow('LIVEKIT_DOWNLOAD_PATH'), livekitRoomname + ".mp4");
+        if (!existsSync(filename)) {
+            throw new NotFoundException(`Video with id ${livekitRoomname} not found.`);
+        }
 
+        return createReadStream(filename);
+    }
 
 }
