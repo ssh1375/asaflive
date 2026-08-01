@@ -6,7 +6,7 @@ import { InviteMeetingDto } from './dto/invite.dto';
 import { PaginationDto } from 'src/users/dto/paginate.dto';
 import * as crypto from 'crypto';
 import { createReadStream, statSync, existsSync } from 'fs';
-
+import axios from "axios";
 import * as path from 'path';
 import { ConfigService } from '@nestjs/config';
 
@@ -35,6 +35,7 @@ export class SessionManagerService {
                     id: true,
                     name: true,
                     metadata: true,
+                    egressdata: true,
                     createdAt: true
                 }
             }),
@@ -119,10 +120,10 @@ export class SessionManagerService {
                 meetingId: meeting.id
             }
         });
+
         try {
             // 4. SECOND: Generate Token using the generated DB ID
             // فرض می‌کنیم شناسه جلسه همان نام روم در لایوکیت است
-            console.log(meeting?.metadata)
             const token = await this.livekitService.generateParticipantToken(
                 // room
                 meeting?.metadata?.['livekitRoomName'],
@@ -139,7 +140,7 @@ export class SessionManagerService {
                 data: {
                     inviteToken: token
                 }
-            })
+            });
 
 
             // 5. Return both DB record and the generated token
@@ -161,12 +162,33 @@ export class SessionManagerService {
 
 
     async getLivekitRoomFile(livekitRoomname: string) {
+
         const filename = path.join(this.configService.getOrThrow('LIVEKIT_DOWNLOAD_PATH'), livekitRoomname + ".mp4");
+
         if (!existsSync(filename)) {
             throw new NotFoundException(`Video with id ${livekitRoomname} not found.`);
         }
 
-        return createReadStream(filename);
+        return { stream: createReadStream(filename, { highWaterMark: 1024 * 1024 }), content_length: statSync(filename) };
+    }
+
+
+    async sendMessage(phone: string, link: string) {
+        try {
+            const { data } = await axios.post('https://rest.payamak-panel.com/api/SendSMS/BaseServiceNumber', {
+                'username': '09397393921',
+                'password': '@Asaf!@#724',
+                'from': "50004001724724",
+                'to': phone,
+                'bodyId': '285769',
+                'text': `${new Intl.DateTimeFormat('fa-IR', { timeStyle: 'medium', dateStyle: "medium" }).format(new Date())}` + `;${link};`
+            });
+
+            return data;
+
+        } catch (error) {
+            console.log(error);
+        }
     }
 
 }

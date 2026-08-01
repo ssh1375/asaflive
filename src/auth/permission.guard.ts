@@ -78,6 +78,9 @@ export class PermissionsGuard implements CanActivate {
 
         // not check permisions to be mathced.
 
+        if (userPermissions.includes('*')) {
+            return true;
+        }
         for (const rPermission of requiredPermissions) {
             if (!userPermissions.includes(rPermission)) {
                 return false;

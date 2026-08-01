@@ -10,17 +10,31 @@ import { RedisStore } from 'connect-redis';
 import { ConfigService } from '@nestjs/config';
 import { randomBytes } from 'crypto';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { json } from 'express';
 
 
 async function bootstrap() {
 
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bodyParser: false });
 
   app.use(cookieParser());
 
   app.set('trust proxy', 1);
 
   app.setGlobalPrefix('api');
+
+  app.use(
+    json({
+      // Tell the parser to accept LiveKit's specific Content-Type
+      type: ['application/json', 'application/webhook+json'],
+
+      // Capture the exact raw byte buffer and attach it to req.rawBody
+      verify: (req: any, res, buf) => {
+        req.rawBody = buf;
+      },
+    })
+  );
+
 
   const configService = app.get(ConfigService);
   app.use(

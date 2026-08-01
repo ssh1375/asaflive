@@ -8,9 +8,6 @@ import { SessionAuthGuard } from 'src/auth/auth.guard';
 import { PermissionsGuard } from 'src/auth/permission.guard';
 
 
-
-
-
 @Controller('users')
 export class UserController {
 
@@ -28,14 +25,14 @@ export class UserController {
 
     @Get()
     @UseGuards(SessionAuthGuard, PermissionsGuard)
-    @RequirePermissions('user:show')
+    @RequirePermissions('user:showAll')
     async findAll(@Query() paginateDto: PaginationDto) {
         return await this.userService.findAll(paginateDto);
     }
 
     @Get(':id')
     @UseGuards(SessionAuthGuard, PermissionsGuard)
-    @RequirePermissions('user:show')
+    @RequirePermissions('user:showAll')
     async findOne(@Param('id') id: string) {
         return await this.userService.findOne(id);
     }

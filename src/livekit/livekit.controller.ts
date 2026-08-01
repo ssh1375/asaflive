@@ -1,44 +1,58 @@
-import { Controller, Post, Req, Res, HttpStatus, Logger } from '@nestjs/common';
+import { Controller, Post, Req, Res, HttpStatus, Logger, RawBodyRequest, Headers, BadRequestException } from '@nestjs/common';
 import { LivekitService } from './livekit.service';
 import { Request, Response } from 'express';
+import { WebhookReceiver } from 'livekit-server-sdk';
+import { ConfigService } from '@nestjs/config';
+import { PrismaService } from 'src/prisma/prisma.service';
 
-@Controller('livekit')
+
+@Controller('webhooks/livekit')
 export class LivekitController {
-    private readonly logger = new Logger(LivekitController.name);
 
-    constructor(private readonly livekitService: LivekitService) { }
+    private webhookReceiver: WebhookReceiver;
 
-    @Post('webhooks')
-    async handleWebhooks(@Req() req: Request, @Res() res: Response) {
-        const authHeader = req.headers.authorization;
+    constructor(private readonly livekitService: LivekitService,
+        private readonly configService: ConfigService,
+        private readonly prismaService: PrismaService) {
+        this.webhookReceiver = new WebhookReceiver(
+            this.configService.getOrThrow<string>('LIVEKIT_API_KEY'),
+            this.configService.getOrThrow<string>('LIVEKIT_API_SECRET')
+        );
+    }
 
-        if (!authHeader) {
-            return res.status(HttpStatus.UNAUTHORIZED).send('Missing Authorization header');
+    @Post()
+    async handleWebhooks(@Req() req: RawBodyRequest<Request>, // <-- 1. Wrap Request with RawBodyRequest
+        @Headers('Authorization') authHeader: string) {
+
+        const rawBody = req.rawBody;
+        console.log(req.body);
+
+        console.log(rawBody);
+
+        if (!rawBody) {
+            throw new BadRequestException('Raw body is required for webhook verification');
         }
 
-        // Attempt to get the body as a string for webhook validation
-        const bodyString = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
-
         try {
-            const event = this.livekitService.processWebhook(bodyString, authHeader);
+            // 3. Pass the RAW string (not req.body) to the receiver
+            const event = await this.webhookReceiver.receive(rawBody?.toString('utf8'), authHeader);
 
-            // Handle different LiveKit events to sync with your database
-            // switch (event.event) {
-            //     case 'participant_joined':
-            //         this.logger.log(`Participant ${event.participant?.identity} joined room ${event.room?.name}`);
-            //         break;
-            //     case 'participant_left':
-            //         this.logger.log(`Participant ${event.participant?.identity} left room ${event.room?.name}`);
-            //         break;
-            //     case 'room_finished':
-            //         this.logger.log(`Room ${event.room?.name} has ended.`);
-            //         // e.g., Update your database session status to 'ended'
-            //         break;
-            // }
+            console.log(`Received LiveKit event: ${event} for room ${event.room?.name}`);
+            if (event.event.startsWith('egress_')) {
+                await this.prismaService.meeting.update({
+                    where: {
+                        id: event.egressInfo?.roomId
+                    },
+                    data: {
+                        egressdata: JSON.stringify(event.egressInfo)
+                    }
+                })
+            }
 
-            return res.status(HttpStatus.OK).send();
+            return { status: 'success' };
         } catch (error) {
-            return res.status(HttpStatus.BAD_REQUEST).send('Invalid webhook signature');
+            console.error('Webhook verification failed:', error);
+            throw new BadRequestException('Invalid webhook signature');
         }
     }
 }

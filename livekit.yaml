@@ -4,6 +4,11 @@ rtc:
   port_range_start: 50000
   port_range_end: 60000
   use_external_ip: true # بسیار مهم برای استقرار روی سرور واقعی
+# Add this section:
+webhook:
+  api_key: "cba015a37cfe895"
+  urls:
+    - "http://127.0.0.1:3000/api/webhooks/livekit" # Your NestJS endpoint
 
 keys:
   cba015a37cfe895: fba403ccabf44d
