@@ -28,8 +28,6 @@ export class PermissionsGuard implements CanActivate {
             [context.getHandler(), context.getClass()],
         );
 
-        // console.log(requiredPermissions, ' required per');
-
         // If no permissions are required, allow access
         if (!requiredPermissions || requiredPermissions.length === 0) {
             return true;

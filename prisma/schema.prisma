@@ -45,7 +45,7 @@ model Role {
 model Permission {
   id    String @id @default(uuid())
   name  String @unique  // e.g. "article:create"
-  description  String
+  description  String?
   roles Role[] // implicit M:N
 
   createdAt DateTime @default(now())
