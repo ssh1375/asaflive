@@ -191,4 +191,25 @@ export class SessionManagerService {
         }
     }
 
+    async removeSessionFile(meetingId: string) {
+        const meeting = await this.prismaService.meeting.findFirstOrThrow({
+            where: {
+                id: meetingId
+            }
+        });
+        const metadata = meeting.metadata as object
+        const livekitRoomName = metadata['livekitRoomName'];
+
+        const filename = path.join(this.configService.getOrThrow('LIVEKIT_DOWNLOAD_PATH'), livekitRoomName + ".mp4");
+
+        return filename;
+
+        // try {
+        //     await access(filePath, constants.F_OK);
+        //     return true;
+        // } catch {
+        //     return false;
+        // }
+    }
+
 }

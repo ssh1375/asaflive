@@ -71,7 +71,7 @@ export class SessionManagerController {
 
         res.set({
             'Content-Type': 'video/mp4',
-            'Content-Disposition': `attachment; filename="video.mp4" `,
+            'Content-Disposition': `attachment; filename="${livekitRoomName}.mp4" `,
             'Content-Length': content_length,
         });
 
@@ -96,4 +96,12 @@ export class SessionManagerController {
     ) {
         return await this.sessionManagerService.kickParticipant(meetingId, participantIdentity);
     }
+
+    @Delete('meetings/:id')
+    @UseGuards(SessionAuthGuard, PermissionsGuard)
+    @RequirePermissions('session:delete_session_file')
+    async deleteSessionFile(@Param('id') meetingId: string) {
+        return await this.sessionManagerService.removeSessionFile(meetingId);
+    }
+
 }
