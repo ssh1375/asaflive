@@ -9,6 +9,7 @@ import { createReadStream, statSync, existsSync } from 'fs';
 import axios from "axios";
 import * as path from 'path';
 import { ConfigService } from '@nestjs/config';
+import { constants, unlink } from 'fs/promises';
 
 
 @Injectable()
@@ -197,19 +198,28 @@ export class SessionManagerService {
                 id: meetingId
             }
         });
-        const metadata = meeting.metadata as object
+
+        const metadata = meeting.metadata as object;
         const livekitRoomName = metadata['livekitRoomName'];
+
 
         const filename = path.join(this.configService.getOrThrow('LIVEKIT_DOWNLOAD_PATH'), livekitRoomName + ".mp4");
 
-        return filename;
+        try {
+            await unlink(filename);
 
-        // try {
-        //     await access(filePath, constants.F_OK);
-        //     return true;
-        // } catch {
-        //     return false;
-        // }
+            return {
+                status: 'Ok',
+                message: "media has been deleted"
+            };
+
+        } catch (error: any) {
+            console.log(error);
+            return {
+                message: "خطا در هنگام حذف فایل.",
+                status: 'error'
+            };
+        }
     }
 
 }
